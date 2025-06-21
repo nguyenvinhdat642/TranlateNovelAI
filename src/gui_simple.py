@@ -52,6 +52,7 @@ class TranslateNovelAI:
         self.output_file_var = tk.StringVar()
         self.api_key_var = tk.StringVar()
         self.model_var = tk.StringVar(value="gemini-2.0-flash")
+        self.context_var = tk.StringVar(value="Bối cảnh hiện đại")
         self.auto_reformat_var = tk.BooleanVar(value=True)
         self.auto_convert_epub_var = tk.BooleanVar(value=False)
         self.book_title_var = tk.StringVar()
@@ -128,6 +129,47 @@ class TranslateNovelAI:
             width=20
         )
         model_combo.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Context selection
+        context_frame = tk.Frame(api_frame)
+        context_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        tk.Label(context_frame, text="Bối cảnh dịch:").pack(side=tk.LEFT)
+        context_combo = ttk.Combobox(
+            context_frame,
+            textvariable=self.context_var,
+            values=[
+                "Bối cảnh hiện đại",
+                "Bối cảnh cổ đại", 
+                "Bối cảnh fantasy/viễn tưởng",
+                "Bối cảnh học đường",
+                "Bối cảnh công sở",
+                "Bối cảnh lãng mạn",
+                "Bối cảnh hành động",
+                "Tùy chỉnh"
+            ],
+            state="readonly",
+            width=25
+        )
+        context_combo.pack(side=tk.LEFT, padx=(10, 0))
+        context_combo.set("Bối cảnh hiện đại")  # Set default
+        
+        # Custom prompt frame (initially hidden)
+        self.custom_prompt_frame = tk.Frame(api_frame)
+        
+        tk.Label(self.custom_prompt_frame, text="Custom Prompt:").pack(anchor=tk.W, pady=(10, 5))
+        self.custom_prompt_var = tk.StringVar()
+        self.custom_prompt_entry = tk.Text(
+            self.custom_prompt_frame,
+            height=3,
+            width=60,
+            wrap=tk.WORD,
+            font=("Arial", 9)
+        )
+        self.custom_prompt_entry.pack(fill=tk.X, pady=(0, 10))
+        
+        # Bind context selection to show/hide custom prompt
+        context_combo.bind('<<ComboboxSelected>>', self.on_context_changed)
         
         # File Selection
         file_frame = tk.LabelFrame(translate_frame, text="📁 File Selection", 
@@ -276,7 +318,26 @@ class TranslateNovelAI:
             values=["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
             state="readonly"
         )
-        model_settings_combo.pack(fill=tk.X, pady=(5, 0))
+        model_settings_combo.pack(fill=tk.X, pady=(5, 10))
+        
+        tk.Label(api_settings_frame, text="Bối cảnh dịch:").pack(anchor=tk.W)
+        context_settings_combo = ttk.Combobox(
+            api_settings_frame,
+            textvariable=self.context_var,
+            values=[
+                "Bối cảnh hiện đại",
+                "Bối cảnh cổ đại", 
+                "Bối cảnh fantasy/viễn tưởng",
+                "Bối cảnh học đường",
+                "Bối cảnh công sở",
+                "Bối cảnh lãng mạn",
+                "Bối cảnh hành động",
+                "Tùy chỉnh"
+            ],
+            state="readonly"
+        )
+        context_settings_combo.pack(fill=tk.X, pady=(5, 0))
+        context_settings_combo.bind('<<ComboboxSelected>>', self.on_context_changed)
         
         # Translation Settings
         translate_settings_frame = tk.LabelFrame(settings_frame, text="🚀 Translation Settings", 
@@ -650,6 +711,36 @@ class TranslateNovelAI:
         self.output_file_var.set(output_path)
         self.log(f"🔄 Đã reset tên file output: {os.path.basename(output_path)}")
     
+    def on_context_changed(self, event=None):
+        """Xử lý khi thay đổi bối cảnh dịch"""
+        if self.context_var.get() == "Tùy chỉnh":
+            self.custom_prompt_frame.pack(fill=tk.X, pady=(10, 0))
+            # Load default custom prompt
+            default_custom = "Dịch văn bản sau sang tiếng Việt. Đảm bảo các câu thoại nhân vật được dịch chính xác và đặt trong dấu "". Đảm bảo giữ nguyên chi tiết nội dung."
+            self.custom_prompt_entry.delete(1.0, tk.END)
+            self.custom_prompt_entry.insert(1.0, default_custom)
+        else:
+            self.custom_prompt_frame.pack_forget()
+    
+    def get_system_instruction(self):
+        """Tạo system instruction dựa trên bối cảnh đã chọn"""
+        context = self.context_var.get()
+        
+        base_instruction = "Dịch văn bản sau sang tiếng Việt. Đảm bảo các câu thoại nhân vật được dịch chính xác và đặt trong dấu "". Đảm bảo giữ nguyên chi tiết nội dung."
+        
+        context_instructions = {
+            "Bối cảnh hiện đại": f"{base_instruction} Bối cảnh hiện đại. Giữ nguyên các từ ngữ thô tục, tình dục.",
+            "Bối cảnh cổ đại": f"{base_instruction} Bối cảnh cổ đại. Sử dụng ngôn ngữ trang trọng, lịch sự phù hợp thời kỳ cổ đại. Dùng danh xưng cổ điển như 'ngươi', 'ta', 'hạ thần'.",
+            "Bối cảnh fantasy/viễn tưởng": f"{base_instruction} Bối cảnh fantasy/viễn tưởng. Giữ nguyên tên thuật ngữ ma thuật, tên kỹ năng, tên vũ khí đặc biệt. Dịch sát nghĩa các thuật ngữ fantasy.",
+            "Bối cảnh học đường": f"{base_instruction} Bối cảnh học đường. Sử dụng ngôn ngữ trẻ trung, năng động. Dịch chính xác các danh xưng học sinh, thầy cô.",
+            "Bối cảnh công sở": f"{base_instruction} Bối cảnh công sở. Sử dụng ngôn ngữ lịch sự, trang trọng phù hợp môi trường làm việc. Dịch chính xác chức danh, thuật ngữ kinh doanh.",
+            "Bối cảnh lãng mạn": f"{base_instruction} Bối cảnh lãng mạn. Chú trọng cảm xúc, ngôn ngữ ngọt ngào, lãng mạn. Dịch tinh tế các câu tỏ tình, biểu đạt tình cảm.",
+            "Bối cảnh hành động": f"{base_instruction} Bối cảnh hành động. Giữ nguyên tên kỹ năng, vũ khí, thuật ngữ chiến đấu. Dịch mạnh mẽ, năng động các cảnh hành động.",
+            "Tùy chỉnh": self.custom_prompt_entry.get(1.0, tk.END).strip() if hasattr(self, 'custom_prompt_entry') else base_instruction
+        }
+        
+        return context_instructions.get(context, base_instruction)
+    
     def toggle_epub_options(self):
         """Toggle EPUB options visibility"""
         if self.auto_convert_epub_var.get():
@@ -755,12 +846,12 @@ class TranslateNovelAI:
         # Run in thread
         self.translation_thread = threading.Thread(
             target=self.run_translation,
-            args=(self.input_file_var.get(), output_file, self.api_key_var.get(), self.model_var.get()),
+            args=(self.input_file_var.get(), output_file, self.api_key_var.get(), self.model_var.get(), self.get_system_instruction()),
             daemon=True
         )
         self.translation_thread.start()
     
-    def run_translation(self, input_file, output_file, api_key, model_name):
+    def run_translation(self, input_file, output_file, api_key, model_name, system_instruction):
         """Chạy quá trình dịch"""
         try:
             self.start_time = time.time()
@@ -770,7 +861,8 @@ class TranslateNovelAI:
                 input_file=input_file,
                 output_file=output_file,
                 api_key=api_key,
-                model_name=model_name
+                model_name=model_name,
+                system_instruction=system_instruction
             )
             
             if success:
@@ -886,9 +978,16 @@ class TranslateNovelAI:
     
     def save_settings(self):
         """Lưu cài đặt"""
+        # Get custom prompt if exists
+        custom_prompt = ""
+        if hasattr(self, 'custom_prompt_entry'):
+            custom_prompt = self.custom_prompt_entry.get(1.0, tk.END).strip()
+            
         settings = {
             "api_key": self.api_key_var.get(),
             "model": self.model_var.get(),
+            "context": self.context_var.get(),
+            "custom_prompt": custom_prompt,
             "auto_reformat": self.auto_reformat_var.get(),
             "auto_convert_epub": self.auto_convert_epub_var.get(),
             "book_author": self.book_author_var.get(),
@@ -915,12 +1014,21 @@ class TranslateNovelAI:
                 
                 self.api_key_var.set(settings.get("api_key", ""))
                 self.model_var.set(settings.get("model", "gemini-2.0-flash"))
+                self.context_var.set(settings.get("context", "Bối cảnh hiện đại"))
                 self.auto_reformat_var.set(settings.get("auto_reformat", True))
                 self.auto_convert_epub_var.set(settings.get("auto_convert_epub", False))
                 self.book_author_var.set(settings.get("book_author", "Unknown Author"))
                 self.chapter_pattern_var.set(settings.get("chapter_pattern", r"^Chương\s+\d+:\s+.*$"))
                 self.threads_var.set(settings.get("threads", "10"))
                 self.chunk_size_var.set(settings.get("chunk_size", "100"))
+                
+                # Load custom prompt if exists
+                if hasattr(self, 'custom_prompt_entry') and settings.get("custom_prompt"):
+                    self.custom_prompt_entry.delete(1.0, tk.END)
+                    self.custom_prompt_entry.insert(1.0, settings.get("custom_prompt"))
+                
+                # Trigger context change to show/hide custom prompt
+                self.on_context_changed()
                 
                 self.log("📂 Đã tải cài đặt")
         except Exception as e:

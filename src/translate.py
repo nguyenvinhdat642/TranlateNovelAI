@@ -222,7 +222,7 @@ def generate_output_filename(input_filepath):
     else:
         return new_name
 
-def translate_file_optimized(input_file, output_file=None, api_key=None, model_name="gemini-2.0-flash"):
+def translate_file_optimized(input_file, output_file=None, api_key=None, model_name="gemini-2.0-flash", system_instruction=None):
     """
     Phiên bản dịch file với multi-threading chunks.
     """
@@ -245,8 +245,11 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
     # Thời gian bắt đầu để tính hiệu suất
     start_time = time.time()
     
-    # System instruction cho AI
-    system_instruction = "Dịch văn bản sau sang tiếng Việt. Bối cảnh hiện đại. Đảm bảo các câu thoại nhân vật được dịch chính xác và đặc trong dấu "". Đảm bảo giữ nguyên chi tiết nội dung. Giữ nguyên các từ ngữ thô tục, tình dục."
+    # System instruction cho AI - sử dụng custom hoặc default
+    if system_instruction is None:
+        system_instruction = "Dịch văn bản sau sang tiếng Việt. Bối cảnh hiện đại. Đảm bảo các câu thoại nhân vật được dịch chính xác và đặc trong dấu "". Đảm bảo giữ nguyên chi tiết nội dung. Giữ nguyên các từ ngữ thô tục, tình dục."
+    
+    print(f"🎯 System instruction: {system_instruction[:100]}...")  # Log first 100 chars
 
     try:
         # Đọc toàn bộ file và chia thành chunks
