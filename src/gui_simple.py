@@ -218,19 +218,6 @@ class TranslateNovelAI:
         )
         self.translate_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        self.stop_btn = tk.Button(
-            control_frame,
-            text="⏹️ Dừng",
-            command=self.stop_translation,
-            bg='#e74c3c',
-            fg='white',
-            font=("Arial", 12, "bold"),
-            relief=tk.FLAT,
-            width=15,
-            state=tk.DISABLED
-        )
-        self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
-        
         save_btn = tk.Button(
             control_frame,
             text="💾 Lưu Cài Đặt",
@@ -750,7 +737,6 @@ class TranslateNovelAI:
         # Start translation
         self.is_translating = True
         self.translate_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
         self.progress_bar.config(mode='indeterminate')
         self.progress_bar.start()
         self.progress_var.set("Đang dịch...")
@@ -787,7 +773,7 @@ class TranslateNovelAI:
                 model_name=model_name
             )
             
-            if success and self.is_translating:
+            if success:
                 self.log("✅ Dịch hoàn thành!")
                 
                 # Auto reformat if enabled
@@ -812,9 +798,6 @@ class TranslateNovelAI:
                 self.progress_var.set("Hoàn thành!")
                 self.progress_bar.config(mode='determinate', value=100)
                 messagebox.showinfo("Thành công", f"Dịch hoàn thành!\nFile: {output_file}")
-                
-            elif not self.is_translating:
-                self.log("⏹️ Đã dừng")
             else:
                 self.log("❌ Dịch thất bại")
                 messagebox.showerror("Lỗi", "Quá trình dịch thất bại")
@@ -825,16 +808,10 @@ class TranslateNovelAI:
         finally:
             self.translation_finished()
     
-    def stop_translation(self):
-        """Dừng quá trình dịch"""
-        self.is_translating = False
-        self.log("⏹️ Đang dừng...")
-    
     def translation_finished(self):
         """Kết thúc quá trình dịch"""
         self.is_translating = False
         self.translate_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
         self.progress_bar.stop()
         
         # Restore stdout
@@ -960,7 +937,6 @@ def main():
     def on_closing():
         if app.is_translating:
             if messagebox.askokcancel("Thoát", "Đang dịch. Bạn có chắc muốn thoát?"):
-                app.stop_translation()
                 app.restore_stdout()  # Ensure stdout is restored
                 root.destroy()
         else:
