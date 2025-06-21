@@ -2,6 +2,19 @@
 
 Ứng dụng dịch truyện tự động sử dụng Google AI (Gemini) để dịch truyện từ tiếng Anh sang tiếng Việt với giao diện GUI hiện đại và dễ sử dụng.
 
+## 🚀 Quick Start
+
+### 📥 Download ngay (Không cần cài đặt)
+**[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/untagged-9c900bbfcc465647b6cb/TranslateNovelAI.exe)**
+
+✅ Chạy trực tiếp trên Windows  
+✅ Không cần Python hay dependencies  
+✅ Giao diện GUI đầy đủ với 4 tabs chuyên biệt  
+
+### 🔑 Cần có:
+- Google AI API Key (miễn phí tại [aistudio.google.com](https://aistudio.google.com/))
+- File truyện định dạng .txt
+
 ## ✨ Tính năng chính
 
 - 🚀 **Multi-threading**: Dịch nhanh với 10 threads song song
@@ -41,24 +54,30 @@ pip install -r requirements.txt
 
 ## 🚀 Cách sử dụng
 
-### Phương pháp 1: GUI (khuyến nghị)
+### Phương pháp 1: Download file exe (khuyến nghị - không cần cài đặt)
+📥 **[Download TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/untagged-9c900bbfcc465647b6cb/TranslateNovelAI.exe)**
+- Tải về và chạy trực tiếp
+- Không cần cài đặt Python hay dependencies
+- Phiên bản portable, chạy được trên Windows
+
+### Phương pháp 2: GUI từ source code
 ```bash
 cd src
 python gui_simple.py
 ```
 
-### Phương pháp 2: Command line
+### Phương pháp 3: Command line
 ```bash
 cd src
 python translate.py
 ```
 
-### Phương pháp 3: File exe
+### Phương pháp 4: Build exe từ source
 ```bash
-# Build exe
+# Build exe từ source code
 python build.py
 
-# Chạy file exe
+# Chạy file exe đã build
 dist/TranslateNovelAI.exe
 ```
 
