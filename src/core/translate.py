@@ -22,7 +22,7 @@ MAX_RETRIES_ON_BAD_TRANSLATION = 5
 RETRY_DELAY_SECONDS = 2
 PROGRESS_FILE_SUFFIX = ".progress.json"
 CHUNK_SIZE = 1024 * 1024  # 1MB (Không còn dùng trực tiếp CHUNK_SIZE cho việc đọc file nữa)
-NUM_WORKERS = 10  # Sử dụng 10 threads như yêu cầu
+
 # Kích thước cửa sổ ngữ cảnh (số đoạn văn bản trước đó dùng làm ngữ cảnh)
 CONTEXT_WINDOW_SIZE = 5
 # Ký tự đặc biệt để đánh dấu phần cần dịch trong prompt gửi đến AI
@@ -31,6 +31,60 @@ TRANSLATE_TAG_END = "</translate_this>"
 
 # Số dòng gom lại thành một chunk để dịch
 CHUNK_SIZE_LINES = 100
+
+def get_optimal_threads():
+    """
+    Tự động tính toán số threads tối ưu dựa trên cấu hình máy.
+    """
+    try:
+        # Lấy số CPU cores
+        cpu_cores = cpu_count()
+        
+        # Tính toán threads tối ưu:
+        # - Với API calls, I/O bound nên có thể dùng nhiều threads hơn số cores
+        # - Nhưng không nên quá nhiều để tránh rate limiting
+        # - Formula: min(max(cpu_cores * 2, 4), 20)
+        optimal_threads = min(max(cpu_cores * 2, 4), 20)
+        
+        print(f"🖥️ Phát hiện {cpu_cores} CPU cores")
+        print(f"🔧 Threads tối ưu được đề xuất: {optimal_threads}")
+        
+        return optimal_threads
+        
+    except Exception as e:
+        print(f"⚠️ Lỗi khi phát hiện CPU cores: {e}")
+        return 10  # Default fallback
+
+def validate_threads(num_threads):
+    """
+    Validate số threads để đảm bảo trong khoảng hợp lý.
+    """
+    try:
+        num_threads = int(num_threads)
+        if num_threads < 1:
+            return 1
+        elif num_threads > 50:  # Giới hạn tối đa để tránh rate limiting
+            return 50
+        return num_threads
+    except (ValueError, TypeError):
+        return get_optimal_threads()
+
+def validate_chunk_size(chunk_size):
+    """
+    Validate chunk size để đảm bảo trong khoảng hợp lý.
+    """
+    try:
+        chunk_size = int(chunk_size)
+        if chunk_size < 10:
+            return 10
+        elif chunk_size > 500:  # Tránh chunks quá lớn
+            return 500
+        return chunk_size
+    except (ValueError, TypeError):
+        return 100  # Default
+
+# Default values
+NUM_WORKERS = get_optimal_threads()  # Tự động tính theo máy
 
 def is_bad_translation(text):
     """
@@ -222,10 +276,21 @@ def generate_output_filename(input_filepath):
     else:
         return new_name
 
-def translate_file_optimized(input_file, output_file=None, api_key=None, model_name="gemini-2.0-flash", system_instruction=None):
+def translate_file_optimized(input_file, output_file=None, api_key=None, model_name="gemini-2.0-flash", system_instruction=None, num_workers=None, chunk_size_lines=None):
     """
     Phiên bản dịch file với multi-threading chunks.
     """
+    # Validate và thiết lập parameters
+    if num_workers is None:
+        num_workers = NUM_WORKERS
+    else:
+        num_workers = validate_threads(num_workers)
+        
+    if chunk_size_lines is None:
+        chunk_size_lines = CHUNK_SIZE_LINES
+    else:
+        chunk_size_lines = validate_chunk_size(chunk_size_lines)
+    
     # Tự động tạo tên file output nếu không được cung cấp
     if output_file is None:
         output_file = generate_output_filename(input_file)
@@ -233,8 +298,8 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
     
     print(f"Bắt đầu dịch file: {input_file}")
     print(f"File output: {output_file}")
-    print(f"Số worker threads: {NUM_WORKERS}")
-    print(f"Kích thước chunk: {CHUNK_SIZE_LINES} dòng")
+    print(f"Số worker threads: {num_workers}")
+    print(f"Kích thước chunk: {chunk_size_lines} dòng")
 
     progress_file_path = f"{input_file}{PROGRESS_FILE_SUFFIX}"
 
@@ -261,8 +326,8 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
         
         # Chia thành chunks
         chunks = []
-        for i in range(0, total_lines, CHUNK_SIZE_LINES):
-            chunk_lines = all_lines[i:i + CHUNK_SIZE_LINES]
+        for i in range(0, total_lines, chunk_size_lines):
+            chunk_lines = all_lines[i:i + chunk_size_lines]
             chunks.append((len(chunks), chunk_lines, i))  # (chunk_index, chunk_lines, start_line_index)
         
         total_chunks = len(chunks)
@@ -283,9 +348,9 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
             # Dictionary để lưu trữ kết quả dịch theo thứ tự chunk index
             translated_chunks_results = {}
             next_expected_chunk_to_write = completed_chunks
-            total_lines_processed = completed_chunks * CHUNK_SIZE_LINES
+            total_lines_processed = completed_chunks * chunk_size_lines
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
                 
                 futures = {} # Lưu trữ các future: {future_object: chunk_index}
                 
@@ -481,7 +546,7 @@ def main():
     print(f"  Input: {input_file}")
     print(f"  Output: {output_file or 'Tự động tạo'}")
     print(f"  Model: {model_name}")
-    print(f"  Threads: {NUM_WORKERS}")
+    print(f"  Threads: {get_optimal_threads()}")
     print(f"  Chunk size: {CHUNK_SIZE_LINES} dòng")
     
     confirm = input("\n🚀 Bắt đầu dịch? (y/N): ").lower().strip()

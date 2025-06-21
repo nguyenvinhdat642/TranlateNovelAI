@@ -123,7 +123,7 @@ class ModernTranslateNovelAI(ctk.CTk):
         
         # Configure window
         self.title("🤖 TranslateNovelAI - Modern Edition")
-        self.geometry("1200x800")
+        self.geometry("1000x600")
         self.minsize(1000, 600)
         
         # Variables
@@ -137,8 +137,11 @@ class ModernTranslateNovelAI(ctk.CTk):
         self.book_title_var = ctk.StringVar()
         self.book_author_var = ctk.StringVar(value="Unknown Author")
         self.chapter_pattern_var = ctk.StringVar(value=r"^Chương\s+\d+:\s+.*$")
-        self.threads_var = ctk.StringVar(value="10")
+        self.threads_var = ctk.StringVar()
         self.chunk_size_var = ctk.StringVar(value="100")
+        
+        # Auto-detect optimal threads on startup
+        self.auto_detect_threads(silent=True)
         
         # Translation state
         self.is_translating = False
@@ -236,27 +239,84 @@ class ModernTranslateNovelAI(ctk.CTk):
         )
         self.context_combo.grid(row=5, column=0, padx=20, pady=5)
         
-        # Settings
+        # Performance Settings
+        self.performance_label = ctk.CTkLabel(
+            self.sidebar_frame,
+            text="⚡ Performance",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        self.performance_label.grid(row=6, column=0, padx=20, pady=(20, 5))
+        
+        # Threads setting
+        self.threads_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
+        self.threads_frame.grid(row=7, column=0, padx=20, pady=5, sticky="ew")
+        self.threads_frame.grid_columnconfigure(1, weight=1)
+        
+        self.threads_label = ctk.CTkLabel(
+            self.threads_frame,
+            text="Threads:",
+            font=ctk.CTkFont(size=12)
+        )
+        self.threads_label.grid(row=0, column=0, sticky="w")
+        
+        self.threads_entry = ctk.CTkEntry(
+            self.threads_frame,
+            textvariable=self.threads_var,
+            width=60,
+            height=28
+        )
+        self.threads_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
+        
+        self.auto_threads_btn = ctk.CTkButton(
+            self.sidebar_frame,
+            text="🔧 Auto Detect",
+            command=self.auto_detect_threads,
+            width=120,
+            height=28
+        )
+        self.auto_threads_btn.grid(row=8, column=0, padx=20, pady=2)
+        
+        # Chunk size setting
+        self.chunk_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
+        self.chunk_frame.grid(row=9, column=0, padx=20, pady=5, sticky="ew")
+        self.chunk_frame.grid_columnconfigure(1, weight=1)
+        
+        self.chunk_label = ctk.CTkLabel(
+            self.chunk_frame,
+            text="Chunk Size:",
+            font=ctk.CTkFont(size=12)
+        )
+        self.chunk_label.grid(row=0, column=0, sticky="w")
+        
+        self.chunk_entry = ctk.CTkEntry(
+            self.chunk_frame,
+            textvariable=self.chunk_size_var,
+            width=60,
+            height=28
+        )
+        self.chunk_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
+        
+        # General Settings
         self.settings_label = ctk.CTkLabel(
             self.sidebar_frame,
             text="⚙️ Settings",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        self.settings_label.grid(row=6, column=0, padx=20, pady=(20, 5))
+        self.settings_label.grid(row=10, column=0, padx=20, pady=(20, 5))
         
         self.auto_reformat_check = ctk.CTkCheckBox(
             self.sidebar_frame,
             text="Auto reformat",
             variable=self.auto_reformat_var
         )
-        self.auto_reformat_check.grid(row=7, column=0, padx=20, pady=5, sticky="w")
+        self.auto_reformat_check.grid(row=11, column=0, padx=20, pady=5, sticky="w")
         
         self.auto_epub_check = ctk.CTkCheckBox(
             self.sidebar_frame,
             text="Auto convert EPUB",
             variable=self.auto_convert_epub_var
         )
-        self.auto_epub_check.grid(row=8, column=0, padx=20, pady=5, sticky="w")
+        self.auto_epub_check.grid(row=12, column=0, padx=20, pady=5, sticky="w")
         
         # Control buttons
         self.translate_btn = ctk.CTkButton(
@@ -266,7 +326,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             height=40,
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        self.translate_btn.grid(row=11, column=0, padx=20, pady=10)
+        self.translate_btn.grid(row=13, column=0, padx=20, pady=10)
         
         self.save_settings_btn = ctk.CTkButton(
             self.sidebar_frame,
@@ -274,7 +334,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             command=self.save_settings,
             height=35
         )
-        self.save_settings_btn.grid(row=12, column=0, padx=20, pady=5)
+        self.save_settings_btn.grid(row=14, column=0, padx=20, pady=5)
         
         # Appearance mode
         self.appearance_mode_label = ctk.CTkLabel(
@@ -282,14 +342,14 @@ class ModernTranslateNovelAI(ctk.CTk):
             text="Appearance Mode:",
             anchor="w"
         )
-        self.appearance_mode_label.grid(row=13, column=0, padx=20, pady=(20, 0), sticky="w")
+        self.appearance_mode_label.grid(row=15, column=0, padx=20, pady=(20, 0), sticky="w")
         
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(
             self.sidebar_frame,
             values=["Light", "Dark", "System"],
             command=self.change_appearance_mode_event
         )
-        self.appearance_mode_optionemenu.grid(row=14, column=0, padx=20, pady=(5, 20))
+        self.appearance_mode_optionemenu.grid(row=16, column=0, padx=20, pady=(5, 20))
         
     def setup_main_content(self):
         """Thiết lập nội dung chính"""
@@ -573,6 +633,32 @@ class ModernTranslateNovelAI(ctk.CTk):
         self.output_file_var.set(output_path)
         self.log(f"🔄 Đã reset tên file output: {os.path.basename(output_path)}")
     
+    def auto_detect_threads(self, silent=False):
+        """Tự động phát hiện số threads tối ưu cho máy"""
+        try:
+            import multiprocessing
+            cpu_cores = multiprocessing.cpu_count()
+            
+            # Tính toán threads tối ưu:
+            # - I/O bound tasks nên dùng nhiều threads hơn số cores
+            # - Nhưng không quá nhiều để tránh rate limiting
+            optimal_threads = min(max(cpu_cores * 2, 4), 20)
+            
+            self.threads_var.set(str(optimal_threads))
+            
+            if not silent:
+                self.log(f"🖥️ Phát hiện {cpu_cores} CPU cores")
+                self.log(f"🔧 Đã đặt threads tối ưu: {optimal_threads}")
+                show_success(f"Đã đặt threads tối ưu: {optimal_threads}\n(Dựa trên {cpu_cores} CPU cores)", parent=self)
+            else:
+                self.log(f"🔧 Tự động đặt {optimal_threads} threads (CPU: {cpu_cores} cores)")
+                
+        except Exception as e:
+            if not silent:
+                self.log(f"⚠️ Lỗi khi phát hiện CPU: {e}")
+                show_warning(f"Không thể tự động phát hiện CPU.\nĐặt về mặc định: 10 threads", parent=self)
+            self.threads_var.set("10")
+    
     def setup_log_capture(self):
         """Thiết lập log capture"""
         if not self.log_capture:
@@ -733,20 +819,41 @@ class ModernTranslateNovelAI(ctk.CTk):
         # Setup log capture
         self.setup_log_capture()
         
+        # Validate performance settings
+        try:
+            num_threads = int(self.threads_var.get())
+            if num_threads < 1 or num_threads > 50:
+                show_warning("Số threads phải từ 1 đến 50!", parent=self)
+                return
+        except ValueError:
+            show_warning("Số threads phải là số nguyên!", parent=self)
+            return
+            
+        try:
+            chunk_size = int(self.chunk_size_var.get())
+            if chunk_size < 10 or chunk_size > 500:
+                show_warning("Chunk size phải từ 10 đến 500!", parent=self)
+                return
+        except ValueError:
+            show_warning("Chunk size phải là số nguyên!", parent=self)
+            return
+        
         self.log("🚀 Bắt đầu quá trình dịch...")
         self.log(f"📁 Input: {os.path.basename(self.input_file_var.get())}")
         self.log(f"📁 Output: {os.path.basename(output_file)}")
         self.log(f"🤖 Model: {self.model_var.get()}")
+        self.log(f"⚡ Threads: {num_threads}")
+        self.log(f"📦 Chunk size: {chunk_size} dòng")
         
         # Run in thread
         self.translation_thread = threading.Thread(
             target=self.run_translation,
-            args=(self.input_file_var.get(), output_file, self.api_key_var.get(), self.model_var.get(), self.get_system_instruction()),
+            args=(self.input_file_var.get(), output_file, self.api_key_var.get(), self.model_var.get(), self.get_system_instruction(), num_threads, chunk_size),
             daemon=True
         )
         self.translation_thread.start()
     
-    def run_translation(self, input_file, output_file, api_key, model_name, system_instruction):
+    def run_translation(self, input_file, output_file, api_key, model_name, system_instruction, num_threads, chunk_size):
         """Chạy quá trình dịch"""
         try:
             self.start_time = time.time()
@@ -756,7 +863,9 @@ class ModernTranslateNovelAI(ctk.CTk):
                 output_file=output_file,
                 api_key=api_key,
                 model_name=model_name,
-                system_instruction=system_instruction
+                system_instruction=system_instruction,
+                num_workers=num_threads,
+                chunk_size_lines=chunk_size
             )
             
             if success:
@@ -884,7 +993,14 @@ class ModernTranslateNovelAI(ctk.CTk):
                 self.auto_convert_epub_var.set(settings.get("auto_convert_epub", False))
                 self.book_author_var.set(settings.get("book_author", "Unknown Author"))
                 self.chapter_pattern_var.set(settings.get("chapter_pattern", r"^Chương\s+\d+:\s+.*$"))
-                self.threads_var.set(settings.get("threads", "10"))
+                
+                # Load threads - nếu không có trong settings thì auto-detect
+                threads_setting = settings.get("threads")
+                if threads_setting:
+                    self.threads_var.set(threads_setting)
+                else:
+                    self.auto_detect_threads(silent=True)
+                    
                 self.chunk_size_var.set(settings.get("chunk_size", "100"))
                 
                 # Load custom prompt if exists
