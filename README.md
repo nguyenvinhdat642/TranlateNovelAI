@@ -55,7 +55,7 @@ pip install -r requirements.txt
 ## 🚀 Cách sử dụng
 
 ### Phương pháp 1: Download file exe (khuyến nghị - không cần cài đặt)
-📥 **[Download TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/untagged-9c900bbfcc465647b6cb/TranslateNovelAI.exe)**
+📥 **[Download TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
 - Tải về và chạy trực tiếp
 - Không cần cài đặt Python hay dependencies
 - Phiên bản portable, chạy được trên Windows
