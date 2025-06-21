@@ -17,7 +17,7 @@
 python run_gui.py
 ```
 ### 📥 Download ngay (Classic GUI - Không cần cài đặt)
-**[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
+**[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.1.0/TranslateNovelAI.exe)**
 
 ### 🔑 Cần có:
 - Google AI API Key (miễn phí tại [aistudio.google.com](https://aistudio.google.com/))
@@ -79,7 +79,7 @@ python run_gui.py
 ## 🚀 Cách sử dụng
 
 ### Phương pháp 1: Download file exe (khuyến nghị - không cần cài đặt)
-📥 **[Download TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
+📥 **[Download TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.1.0/TranslateNovelAI.exe)**
 - Tải về và chạy trực tiếp
 - Không cần cài đặt Python hay dependencies
 - Phiên bản portable, chạy được trên Windows
