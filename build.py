@@ -12,15 +12,14 @@ def build_app():
     
     # Các tham số cho PyInstaller
     args = [
-        'src/gui_app.py',           # File chính
+        'src/gui_simple.py',       # File chính
         '--onefile',                # Tạo 1 file exe duy nhất
         '--windowed',               # Không hiện console (GUI app)
         '--name=TranslateNovelAI',  # Tên file exe
-        '--icon=icon.ico',          # Icon (nếu có)
         '--add-data=src/translate.py;.',        # Include translate.py
         '--add-data=src/reformat.py;.',         # Include reformat.py
+        '--add-data=src/ConvertEpub.py;.',      # Include ConvertEpub.py
         '--hidden-import=google.generativeai',   # Hidden imports
-        '--hidden-import=ttkbootstrap',
         '--hidden-import=tkinter',
         '--hidden-import=threading',
         '--hidden-import=json',
@@ -58,8 +57,7 @@ def install_dependencies():
     dependencies = [
         "pyinstaller",
         "google-generativeai",
-        "ttkbootstrap",
-        "Pillow"
+        "python-docx"
     ]
     
     print("📦 Cài đặt dependencies...")

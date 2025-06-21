@@ -1,9 +1,0 @@
-Chào thế giới! Đây là một tập tin thử nghiệm.
-
-Hôm nay bạn khỏe không?
-
-Tôi hy vọng mọi thứ đang hoạt động tốt.
-
-Đây là dòng 4.
-
-Và đây là dòng 5.

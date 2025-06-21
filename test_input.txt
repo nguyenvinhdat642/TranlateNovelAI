@@ -1,5 +1,0 @@
-Hello world! This is a test file.
-How are you today?
-I hope everything is working fine.
-This is line 4.
-And this is line 5. 

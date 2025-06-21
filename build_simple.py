@@ -1,6 +1,6 @@
 """
-Script để build ứng dụng TranslateNovelAI (GUI đơn giản) thành file exe
-Chạy: python build_simple.py
+Script để build ứng dụng TranslateNovelAI thành file exe
+Chạy: python build.py
 """
 
 import PyInstaller.__main__
@@ -15,7 +15,7 @@ def build_app():
         'src/gui_simple.py',       # File chính
         '--onefile',                # Tạo 1 file exe duy nhất
         '--windowed',               # Không hiện console (GUI app)
-        '--name=TranslateNovelAI_Simple',  # Tên file exe
+        '--name=TranslateNovelAI',  # Tên file exe
         '--add-data=src/translate.py;.',        # Include translate.py
         '--add-data=src/reformat.py;.',         # Include reformat.py
         '--add-data=src/ConvertEpub.py;.',      # Include ConvertEpub.py
@@ -28,7 +28,7 @@ def build_app():
         '--clean',                  # Clean build cache
     ]
     
-    print("🚀 Bắt đầu build ứng dụng GUI đơn giản...")
+    print("🚀 Bắt đầu build ứng dụng...")
     print("Tham số PyInstaller:")
     for arg in args:
         print(f"  {arg}")
@@ -36,10 +36,10 @@ def build_app():
     try:
         PyInstaller.__main__.run(args)
         print("\n✅ Build thành công!")
-        print(f"📁 File exe được tạo tại: dist/TranslateNovelAI_Simple.exe")
+        print(f"📁 File exe được tạo tại: dist/TranslateNovelAI.exe")
         
         # Kiểm tra file có tồn tại không
-        exe_path = "dist/TranslateNovelAI_Simple.exe"
+        exe_path = "dist/TranslateNovelAI.exe"
         if os.path.exists(exe_path):
             file_size = os.path.getsize(exe_path) / (1024 * 1024)  # MB
             print(f"📊 Kích thước file: {file_size:.1f} MB")
@@ -73,7 +73,7 @@ def install_dependencies():
     return True
 
 if __name__ == "__main__":
-    print("=== TranslateNovelAI Simple Build Tool ===\n")
+    print("=== TranslateNovelAI Build Tool ===\n")
     
     # Kiểm tra Python version
     if sys.version_info < (3, 8):
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     if build_confirm == 'y':
         if build_app():
             print("\n🎉 Build hoàn thành!")
-            print("Bạn có thể chạy file dist/TranslateNovelAI_Simple.exe")
+            print("Bạn có thể chạy file dist/TranslateNovelAI.exe")
         else:
             print("\n❌ Build thất bại!")
             sys.exit(1)
