@@ -5,7 +5,7 @@
 ## 🚀 Quick Start
 
 ### 📥 Download ngay (Không cần cài đặt)
-**[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/untagged-9c900bbfcc465647b6cb/TranslateNovelAI.exe)**
+**[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
 
 ✅ Chạy trực tiếp trên Windows  
 ✅ Không cần Python hay dependencies  
