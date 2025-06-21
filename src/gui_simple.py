@@ -7,6 +7,8 @@ import time
 from datetime import datetime
 import json
 import re
+import io
+from contextlib import redirect_stdout
 
 # Import translate functions
 try:
@@ -19,6 +21,24 @@ except ImportError as e:
     TRANSLATE_AVAILABLE = False
     EPUB_AVAILABLE = False
     print(f"⚠️ Lỗi import: {e}")
+
+class LogCapture:
+    """Class để capture print statements và chuyển về GUI"""
+    def __init__(self, gui_log_function):
+        self.gui_log = gui_log_function
+        self.terminal = sys.stdout
+        
+    def write(self, message):
+        # Ghi vào terminal như bình thường
+        self.terminal.write(message)
+        self.terminal.flush()
+        
+        # Gửi về GUI (loại bỏ newline để GUI tự xử lý)
+        if message.strip():
+            self.gui_log(message.strip())
+    
+    def flush(self):
+        self.terminal.flush()
 
 class TranslateNovelAI:
     def __init__(self, root):
@@ -44,6 +64,10 @@ class TranslateNovelAI:
         self.total_chunks = 0
         self.completed_chunks = 0
         self.start_time = 0
+        
+        # Log capture
+        self.original_stdout = sys.stdout
+        self.log_capture = None
         
         # Setup GUI
         self.setup_gui()
@@ -129,7 +153,7 @@ class TranslateNovelAI:
         input_btn.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Output file
-        tk.Label(file_frame, text="Output File (tự động tạo nếu để trống):").pack(anchor=tk.W)
+        tk.Label(file_frame, text="Output File (tự động tạo nếu để trống, nút Reset để tạo lại):").pack(anchor=tk.W)
         output_path_frame = tk.Frame(file_frame)
         output_path_frame.pack(fill=tk.X, pady=(5, 0))
         
@@ -142,9 +166,21 @@ class TranslateNovelAI:
             command=self.browse_output_file,
             bg='#3498db',
             fg='white',
-            relief=tk.FLAT
+            relief=tk.FLAT,
+            width=8
         )
-        output_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        output_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        
+        reset_output_btn = tk.Button(
+            output_path_frame,
+            text="🔄 Reset",
+            command=self.reset_output_filename,
+            bg='#95a5a6',
+            fg='white',
+            relief=tk.FLAT,
+            width=8
+        )
+        reset_output_btn.pack(side=tk.RIGHT, padx=(5, 0))
         
         # Options
         options_frame = tk.LabelFrame(translate_frame, text="⚙️ Options", 
@@ -217,7 +253,20 @@ class TranslateNovelAI:
         self.progress_label.pack(anchor=tk.W, pady=(0, 5))
         
         self.progress_bar = ttk.Progressbar(progress_frame, mode='determinate')
-        self.progress_bar.pack(fill=tk.X)
+        self.progress_bar.pack(fill=tk.X, pady=(0, 10))
+        
+        # Mini log area in translate tab
+        mini_log_frame = tk.LabelFrame(translate_frame, text="📝 Logs (Xem chi tiết ở tab Logs)", 
+                                      font=("Arial", 9, "bold"), padx=10, pady=10)
+        mini_log_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.mini_log_text = scrolledtext.ScrolledText(
+            mini_log_frame,
+            height=8,
+            font=("Consolas", 8),
+            wrap=tk.WORD
+        )
+        self.mini_log_text.pack(fill=tk.BOTH, expand=True)
         
     def create_settings_tab(self):
         """Tab cài đặt"""
@@ -411,7 +460,16 @@ class TranslateNovelAI:
             fg='white',
             relief=tk.FLAT
         )
-        save_log_btn.pack(side=tk.LEFT)
+        save_log_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        auto_scroll_var = tk.BooleanVar(value=True)
+        auto_scroll_check = tk.Checkbutton(
+            log_controls_frame,
+            text="🔄 Auto-scroll",
+            variable=auto_scroll_var
+        )
+        auto_scroll_check.pack(side=tk.LEFT, padx=(10, 0))
+        self.auto_scroll_var = auto_scroll_var
         
         # Log text area
         self.log_text = scrolledtext.ScrolledText(
@@ -422,6 +480,101 @@ class TranslateNovelAI:
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
         
+    def setup_log_capture(self):
+        """Thiết lập log capture để chuyển print statements từ translate.py lên GUI"""
+        if not self.log_capture:
+            self.log_capture = LogCapture(self.log_from_translate)
+            sys.stdout = self.log_capture
+    
+    def restore_stdout(self):
+        """Khôi phục stdout về trạng thái ban đầu"""
+        if self.log_capture:
+            sys.stdout = self.original_stdout
+            self.log_capture = None
+    
+    def log_from_translate(self, message):
+        """Nhận log từ translate.py và hiển thị lên GUI"""
+        # Sử dụng thread-safe method để update GUI
+        self.root.after(0, lambda: self._update_log_ui(message))
+    
+    def _update_log_ui(self, message):
+        """Update log UI (thread-safe)"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_message = f"[{timestamp}] {message}"
+        
+        # Update both main log and mini log
+        self.log_text.insert(tk.END, log_message + "\n")
+        self.mini_log_text.insert(tk.END, log_message + "\n")
+        
+        # Auto-scroll if enabled
+        if self.auto_scroll_var.get():
+            self.log_text.see(tk.END)
+            self.mini_log_text.see(tk.END)
+        
+        # Limit log size (keep last 1000 lines)
+        self._limit_log_size()
+        
+        # Update progress if it's a progress message
+        self._update_progress_from_log(message)
+        
+        self.root.update_idletasks()
+    
+    def _limit_log_size(self):
+        """Giới hạn số dòng log để tránh tràn bộ nhớ"""
+        max_lines = 1000
+        
+        for log_widget in [self.log_text, self.mini_log_text]:
+            lines = log_widget.get("1.0", tk.END).split('\n')
+            if len(lines) > max_lines:
+                # Xóa các dòng cũ, giữ lại max_lines dòng cuối
+                log_widget.delete("1.0", f"{len(lines) - max_lines}.0")
+    
+    def _update_progress_from_log(self, message):
+        """Cập nhật progress bar từ log messages"""
+        try:
+            # Tìm pattern tiến độ: "Hoàn thành chunk X/Y" hoặc "Tiến độ: X/Y chunks"
+            import re
+            
+            # Pattern 1: "✅ Hoàn thành chunk 5/100"
+            match1 = re.search(r'Hoàn thành chunk (\d+)/(\d+)', message)
+            if match1:
+                current = int(match1.group(1))
+                total = int(match1.group(2))
+                progress_percent = (current / total) * 100
+                self.progress_bar.config(mode='determinate', value=progress_percent)
+                self.progress_var.set(f"Hoàn thành chunk {current}/{total} ({progress_percent:.1f}%)")
+                return
+            
+            # Pattern 2: "Tiến độ: 45/100 chunks (45.0%)"
+            match2 = re.search(r'Tiến độ: (\d+)/(\d+) chunks \((\d+\.?\d*)%\)', message)
+            if match2:
+                current = int(match2.group(1))
+                total = int(match2.group(2))
+                percent = float(match2.group(3))
+                self.progress_bar.config(mode='determinate', value=percent)
+                self.progress_var.set(f"Tiến độ: {current}/{total} chunks ({percent:.1f}%)")
+                return
+            
+            # Pattern 3: "Tổng số chunks: X"
+            match3 = re.search(r'Tổng số chunks: (\d+)', message)
+            if match3:
+                self.total_chunks = int(match3.group(1))
+                self.progress_bar.config(mode='determinate', maximum=100)
+                return
+            
+            # Pattern 4: "Đã hoàn thành X chunk trước đó"
+            match4 = re.search(r'Đã hoàn thành (\d+) chunk trước đó', message)
+            if match4:
+                self.completed_chunks = int(match4.group(1))
+                if self.total_chunks > 0:
+                    progress_percent = (self.completed_chunks / self.total_chunks) * 100
+                    self.progress_bar.config(value=progress_percent)
+                return
+                
+        except Exception:
+            # Nếu có lỗi trong việc parse, bỏ qua
+            pass
+    
     def browse_input_file(self):
         """Chọn file input"""
         file_path = filedialog.askopenfilename(
@@ -433,19 +586,30 @@ class TranslateNovelAI:
         )
         if file_path:
             self.input_file_var.set(file_path)
-            if not self.output_file_var.get():
-                output_path = generate_output_filename(file_path)
-                self.output_file_var.set(output_path)
+            
+            # ALWAYS auto-generate output filename when selecting new input
+            output_path = generate_output_filename(file_path)
+            self.output_file_var.set(output_path)
+            self.log(f"📁 Tự động tạo tên file output: {os.path.basename(output_path)}")
             
             # Auto-fill book title from filename
-            if not self.book_title_var.get():
+            if not self.book_title_var.get() or self.book_title_var.get() == "Unknown Title":
                 filename = os.path.splitext(os.path.basename(file_path))[0]
                 self.book_title_var.set(filename)
+                
+            # Reset EPUB input to match current input file
+            self.epub_input_var.set(file_path)
     
     def browse_output_file(self):
         """Chọn file output"""
+        # Get the directory of input file for better UX
+        initial_dir = ""
+        if self.input_file_var.get():
+            initial_dir = os.path.dirname(self.input_file_var.get())
+            
         file_path = filedialog.asksaveasfilename(
             title="Chọn nơi lưu file đã dịch",
+            initialdir=initial_dir,
             defaultextension=".txt",
             filetypes=[
                 ("Text files", "*.txt"),
@@ -454,11 +618,25 @@ class TranslateNovelAI:
         )
         if file_path:
             self.output_file_var.set(file_path)
+            self.log(f"📁 Đã chọn file output: {os.path.basename(file_path)}")
     
     def browse_epub_input(self):
         """Chọn file để convert EPUB"""
+        # Default to current input file's directory
+        initial_dir = ""
+        initial_file = ""
+        if self.input_file_var.get():
+            initial_dir = os.path.dirname(self.input_file_var.get())
+            # Suggest the translated file if it exists
+            if self.output_file_var.get() and os.path.exists(self.output_file_var.get()):
+                initial_file = self.output_file_var.get()
+            else:
+                initial_file = self.input_file_var.get()
+                
         file_path = filedialog.askopenfilename(
             title="Chọn file TXT để convert sang EPUB",
+            initialdir=initial_dir,
+            initialfile=os.path.basename(initial_file) if initial_file else "",
             filetypes=[
                 ("Text files", "*.txt"),
                 ("All files", "*.*")
@@ -466,6 +644,24 @@ class TranslateNovelAI:
         )
         if file_path:
             self.epub_input_var.set(file_path)
+            
+            # Auto-fill book title from selected file if not set
+            if not self.book_title_var.get() or self.book_title_var.get() == "Unknown Title":
+                filename = os.path.splitext(os.path.basename(file_path))[0]
+                # Remove _TranslateAI suffix if present
+                if filename.endswith("_TranslateAI"):
+                    filename = filename[:-12]
+                self.book_title_var.set(filename)
+    
+    def reset_output_filename(self):
+        """Reset output filename to auto-generated name"""
+        if not self.input_file_var.get():
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn file input trước!")
+            return
+            
+        output_path = generate_output_filename(self.input_file_var.get())
+        self.output_file_var.set(output_path)
+        self.log(f"🔄 Đã reset tên file output: {os.path.basename(output_path)}")
     
     def toggle_epub_options(self):
         """Toggle EPUB options visibility"""
@@ -475,19 +671,25 @@ class TranslateNovelAI:
             self.notebook.tab(2, state="disabled")  # Disable EPUB tab
     
     def log(self, message):
-        """Ghi log vào text area"""
+        """Ghi log vào text area (method cho GUI logs)"""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        log_message = f"[{timestamp}] {message}\n"
+        log_message = f"[{timestamp}] {message}"
         
-        self.log_text.insert(tk.END, log_message)
-        self.log_text.see(tk.END)
+        self.log_text.insert(tk.END, log_message + "\n")
+        self.mini_log_text.insert(tk.END, log_message + "\n")
+        
+        if self.auto_scroll_var.get():
+            self.log_text.see(tk.END)
+            self.mini_log_text.see(tk.END)
+            
         self.root.update_idletasks()
         
-        print(log_message.strip())  # Also print to console
+        print(message)  # Also print to console
     
     def clear_logs(self):
         """Xóa logs"""
         self.log_text.delete(1.0, tk.END)
+        self.mini_log_text.delete(1.0, tk.END)
         self.log("🗑️ Đã xóa logs")
     
     def save_logs(self):
@@ -528,6 +730,22 @@ class TranslateNovelAI:
         if not output_file:
             output_file = generate_output_filename(self.input_file_var.get())
             self.output_file_var.set(output_file)
+            self.log(f"📝 Tự động tạo tên file output: {os.path.basename(output_file)}")
+        
+        # Check if input and output are the same
+        if os.path.abspath(self.input_file_var.get()) == os.path.abspath(output_file):
+            messagebox.showerror("Lỗi", "File input và output không thể giống nhau!")
+            return
+        
+        # Warn if output file exists
+        if os.path.exists(output_file):
+            result = messagebox.askyesno(
+                "Cảnh báo", 
+                f"File output đã tồn tại:\n{os.path.basename(output_file)}\n\nBạn có muốn ghi đè không?",
+                icon='warning'
+            )
+            if not result:
+                return
         
         # Start translation
         self.is_translating = True
@@ -537,10 +755,16 @@ class TranslateNovelAI:
         self.progress_bar.start()
         self.progress_var.set("Đang dịch...")
         
+        # Setup log capture
+        self.setup_log_capture()
+        
         self.log("🚀 Bắt đầu quá trình dịch...")
         self.log(f"📁 Input: {os.path.basename(self.input_file_var.get())}")
         self.log(f"📁 Output: {os.path.basename(output_file)}")
         self.log(f"🤖 Model: {self.model_var.get()}")
+        
+        # Automatically switch to logs tab to show progress
+        self.notebook.select(3)  # Select logs tab (index 3)
         
         # Run in thread
         self.translation_thread = threading.Thread(
@@ -555,7 +779,7 @@ class TranslateNovelAI:
         try:
             self.start_time = time.time()
             
-            # Call translate function
+            # Call translate function (logs will be captured automatically)
             success = translate_file_optimized(
                 input_file=input_file,
                 output_file=output_file,
@@ -586,6 +810,7 @@ class TranslateNovelAI:
                 elapsed_time = time.time() - self.start_time
                 self.log(f"⏱️ Thời gian hoàn thành: {elapsed_time:.1f} giây")
                 self.progress_var.set("Hoàn thành!")
+                self.progress_bar.config(mode='determinate', value=100)
                 messagebox.showinfo("Thành công", f"Dịch hoàn thành!\nFile: {output_file}")
                 
             elif not self.is_translating:
@@ -611,7 +836,10 @@ class TranslateNovelAI:
         self.translate_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.progress_bar.stop()
-        self.progress_bar.config(mode='determinate')
+        
+        # Restore stdout
+        self.restore_stdout()
+        
         if not self.progress_var.get().startswith("Hoàn thành"):
             self.progress_var.set("Sẵn sàng")
     
@@ -661,13 +889,23 @@ class TranslateNovelAI:
         
         self.log("📚 Bắt đầu convert EPUB manual...")
         
+        # Setup log capture for EPUB conversion
+        self.setup_log_capture()
+        
         # Run in thread
         convert_thread = threading.Thread(
-            target=self.convert_to_epub,
+            target=self._convert_epub_thread,
             args=(self.epub_input_var.get(),),
             daemon=True
         )
         convert_thread.start()
+    
+    def _convert_epub_thread(self, file_path):
+        """Thread wrapper for EPUB conversion"""
+        try:
+            self.convert_to_epub(file_path)
+        finally:
+            self.restore_stdout()
     
     def save_settings(self):
         """Lưu cài đặt"""
@@ -710,6 +948,10 @@ class TranslateNovelAI:
                 self.log("📂 Đã tải cài đặt")
         except Exception as e:
             self.log(f"⚠️ Lỗi tải cài đặt: {e}")
+            
+    def __del__(self):
+        """Destructor để đảm bảo stdout được khôi phục"""
+        self.restore_stdout()
 
 def main():
     root = tk.Tk()
@@ -719,8 +961,10 @@ def main():
         if app.is_translating:
             if messagebox.askokcancel("Thoát", "Đang dịch. Bạn có chắc muốn thoát?"):
                 app.stop_translation()
+                app.restore_stdout()  # Ensure stdout is restored
                 root.destroy()
         else:
+            app.restore_stdout()  # Ensure stdout is restored
             root.destroy()
     
     root.protocol("WM_DELETE_WINDOW", on_closing)
