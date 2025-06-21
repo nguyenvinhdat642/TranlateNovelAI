@@ -29,16 +29,27 @@ class LogCapture:
         self.terminal = sys.stdout
         
     def write(self, message):
-        # Ghi vào terminal như bình thường
-        self.terminal.write(message)
-        self.terminal.flush()
+        # Ghi vào terminal như bình thường (kiểm tra None trước)
+        if self.terminal is not None:
+            try:
+                self.terminal.write(message)
+                self.terminal.flush()
+            except:
+                pass  # Bỏ qua lỗi terminal write
         
         # Gửi về GUI (loại bỏ newline để GUI tự xử lý)
-        if message.strip():
-            self.gui_log(message.strip())
+        if message.strip() and self.gui_log is not None:
+            try:
+                self.gui_log(message.strip())
+            except:
+                pass  # Bỏ qua lỗi GUI update
     
     def flush(self):
-        self.terminal.flush()
+        if self.terminal is not None:
+            try:
+                self.terminal.flush()
+            except:
+                pass
 
 class TranslateNovelAI:
     def __init__(self, root):
@@ -547,35 +558,54 @@ class TranslateNovelAI:
     
     def _update_log_ui(self, message):
         """Update log UI (thread-safe)"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_message = f"[{timestamp}] {message}"
-        
-        # Update both main log and mini log
-        self.log_text.insert(tk.END, log_message + "\n")
-        self.mini_log_text.insert(tk.END, log_message + "\n")
-        
-        # Auto-scroll if enabled
-        if self.auto_scroll_var.get():
-            self.log_text.see(tk.END)
-            self.mini_log_text.see(tk.END)
-        
-        # Limit log size (keep last 1000 lines)
-        self._limit_log_size()
-        
-        # Update progress if it's a progress message
-        self._update_progress_from_log(message)
-        
-        self.root.update_idletasks()
+        try:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_message = f"[{timestamp}] {message}"
+            
+            # Update both main log and mini log (kiểm tra tồn tại trước)
+            if hasattr(self, 'log_text') and self.log_text is not None:
+                self.log_text.insert(tk.END, log_message + "\n")
+            if hasattr(self, 'mini_log_text') and self.mini_log_text is not None:
+                self.mini_log_text.insert(tk.END, log_message + "\n")
+            
+            # Auto-scroll if enabled
+            if hasattr(self, 'auto_scroll_var') and self.auto_scroll_var.get():
+                if hasattr(self, 'log_text') and self.log_text is not None:
+                    self.log_text.see(tk.END)
+                if hasattr(self, 'mini_log_text') and self.mini_log_text is not None:
+                    self.mini_log_text.see(tk.END)
+            
+            # Limit log size (keep last 1000 lines)
+            self._limit_log_size()
+            
+            # Update progress if it's a progress message
+            self._update_progress_from_log(message)
+            
+            if hasattr(self, 'root') and self.root is not None:
+                self.root.update_idletasks()
+        except Exception as e:
+            # Nếu có lỗi, in ra console để debug
+            print(f"⚠️ Lỗi update log UI: {e}")
     
     def _limit_log_size(self):
         """Giới hạn số dòng log để tránh tràn bộ nhớ"""
-        max_lines = 1000
-        
-        for log_widget in [self.log_text, self.mini_log_text]:
-            lines = log_widget.get("1.0", tk.END).split('\n')
-            if len(lines) > max_lines:
-                # Xóa các dòng cũ, giữ lại max_lines dòng cuối
-                log_widget.delete("1.0", f"{len(lines) - max_lines}.0")
+        try:
+            max_lines = 1000
+            
+            # Kiểm tra từng widget riêng biệt
+            for attr_name in ['log_text', 'mini_log_text']:
+                if hasattr(self, attr_name):
+                    log_widget = getattr(self, attr_name)
+                    if log_widget is not None:
+                        try:
+                            lines = log_widget.get("1.0", tk.END).split('\n')
+                            if len(lines) > max_lines:
+                                # Xóa các dòng cũ, giữ lại max_lines dòng cuối
+                                log_widget.delete("1.0", f"{len(lines) - max_lines}.0")
+                        except Exception:
+                            pass  # Bỏ qua lỗi từng widget
+        except Exception:
+            pass  # Bỏ qua lỗi tổng thể
     
     def _update_progress_from_log(self, message):
         """Cập nhật progress bar từ log messages"""
@@ -750,25 +780,40 @@ class TranslateNovelAI:
     
     def log(self, message):
         """Ghi log vào text area (method cho GUI logs)"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_message = f"[{timestamp}] {message}"
-        
-        self.log_text.insert(tk.END, log_message + "\n")
-        self.mini_log_text.insert(tk.END, log_message + "\n")
-        
-        if self.auto_scroll_var.get():
-            self.log_text.see(tk.END)
-            self.mini_log_text.see(tk.END)
+        try:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_message = f"[{timestamp}] {message}"
             
-        self.root.update_idletasks()
-        
-        print(message)  # Also print to console
+            # Kiểm tra tồn tại của các widget trước khi sử dụng
+            if hasattr(self, 'log_text') and self.log_text is not None:
+                self.log_text.insert(tk.END, log_message + "\n")
+            if hasattr(self, 'mini_log_text') and self.mini_log_text is not None:
+                self.mini_log_text.insert(tk.END, log_message + "\n")
+            
+            if hasattr(self, 'auto_scroll_var') and self.auto_scroll_var.get():
+                if hasattr(self, 'log_text') and self.log_text is not None:
+                    self.log_text.see(tk.END)
+                if hasattr(self, 'mini_log_text') and self.mini_log_text is not None:
+                    self.mini_log_text.see(tk.END)
+                
+            if hasattr(self, 'root') and self.root is not None:
+                self.root.update_idletasks()
+            
+            print(message)  # Also print to console
+        except Exception as e:
+            # Nếu có lỗi, chỉ in ra console
+            print(f"⚠️ Lỗi log GUI: {e} - Message: {message}")
     
     def clear_logs(self):
         """Xóa logs"""
-        self.log_text.delete(1.0, tk.END)
-        self.mini_log_text.delete(1.0, tk.END)
-        self.log("🗑️ Đã xóa logs")
+        try:
+            if hasattr(self, 'log_text') and self.log_text is not None:
+                self.log_text.delete(1.0, tk.END)
+            if hasattr(self, 'mini_log_text') and self.mini_log_text is not None:
+                self.mini_log_text.delete(1.0, tk.END)
+            print("🗑️ Đã xóa logs")  # Sử dụng print thay vì self.log để tránh vòng lặp
+        except Exception as e:
+            print(f"⚠️ Lỗi xóa logs: {e}")
     
     def save_logs(self):
         """Lưu logs ra file"""
