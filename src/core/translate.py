@@ -32,6 +32,26 @@ TRANSLATE_TAG_END = "</translate_this>"
 # Số dòng gom lại thành một chunk để dịch
 CHUNK_SIZE_LINES = 100
 
+# Global stop event để dừng tiến trình dịch
+_stop_event = threading.Event()
+
+def set_stop_translation():
+    """Dừng tiến trình dịch"""
+    global _stop_event
+    _stop_event.set()
+    print("🛑 Đã yêu cầu dừng tiến trình dịch...")
+
+def clear_stop_translation():
+    """Xóa flag dừng để có thể tiếp tục dịch"""
+    global _stop_event
+    _stop_event.clear()
+    print("▶️ Đã xóa flag dừng, sẵn sàng tiếp tục...")
+
+def is_translation_stopped():
+    """Kiểm tra xem có yêu cầu dừng không"""
+    global _stop_event
+    return _stop_event.is_set()
+
 def get_optimal_threads():
     """
     Tự động tính toán số threads tối ưu dựa trên cấu hình máy.
@@ -211,6 +231,10 @@ def process_chunk(api_key, model_name, system_instruction, chunk_data, log_callb
     """
     chunk_index, chunk_lines, chunk_start_line_index = chunk_data
     
+    # Kiểm tra flag dừng trước khi bắt đầu
+    if is_translation_stopped():
+        return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+    
     # Cấu hình API cho thread hiện tại
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
@@ -222,9 +246,17 @@ def process_chunk(api_key, model_name, system_instruction, chunk_data, log_callb
     safety_retries = 0
     is_safety_blocked = False  # Khởi tạo biến
     while safety_retries < MAX_RETRIES_ON_SAFETY_BLOCK:
+        # Kiểm tra flag dừng trong quá trình retry
+        if is_translation_stopped():
+            return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+            
         # Thử lại với bản dịch xấu  
         bad_translation_retries = 0
         while bad_translation_retries < MAX_RETRIES_ON_BAD_TRANSLATION:
+            # Kiểm tra flag dừng trong quá trình retry
+            if is_translation_stopped():
+                return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+                
             try:
                 translated_text, is_safety_blocked, is_bad = translate_chunk(model, chunk_lines)
                 
@@ -280,6 +312,9 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
     """
     Phiên bản dịch file với multi-threading chunks.
     """
+    # Clear stop flag khi bắt đầu dịch mới
+    clear_stop_translation()
+    
     # Validate và thiết lập parameters
     if num_workers is None:
         num_workers = NUM_WORKERS
@@ -360,11 +395,25 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
                 print(f"Gửi {len(chunks_to_process)} chunks đến thread pool...")
                 
                 for chunk_data in chunks_to_process:
+                    # Kiểm tra flag dừng trước khi submit
+                    if is_translation_stopped():
+                        print("🛑 Dừng gửi chunks mới do người dùng yêu cầu")
+                        break
+                        
                     future = executor.submit(process_chunk, api_key, model_name, system_instruction, chunk_data)
                     futures[future] = chunk_data[0]  # chunk_index
                 
                 # Thu thập kết quả khi các threads hoàn thành
                 for future in concurrent.futures.as_completed(futures):
+                    # Kiểm tra flag dừng
+                    if is_translation_stopped():
+                        print("🛑 Dừng xử lý kết quả do người dùng yêu cầu")
+                        # Hủy các future chưa hoàn thành
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
+                        
                     chunk_index = futures[future]
                     try:
                         result = future.result()  # (chunk_index, translated_text, lines_count)
@@ -416,6 +465,13 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
                             print(f"✅ Ghi chunk bị sót: {chunk_idx + 1}")
                         except Exception as e:
                             print(f"❌ Lỗi khi ghi chunk {chunk_idx}: {e}")
+
+        # Kiểm tra xem có bị dừng giữa chừng không
+        if is_translation_stopped():
+            print(f"🛑 Tiến trình dịch đã bị dừng bởi người dùng.")
+            print(f"Đã xử lý {next_expected_chunk_to_write}/{total_chunks} chunks.")
+            print(f"💾 Tiến độ đã được lưu. Bạn có thể tiếp tục dịch sau.")
+            return False
 
         # Hoàn thành
         total_time = time.time() - start_time

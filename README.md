@@ -1,77 +1,37 @@
-# 🤖 TranslateNovelAI v2.0
+# 🤖 TranslateNovelAI v1.1.0
 
-Ứng dụng dịch truyện tự động sử dụng Google AI (Gemini) với **3 phiên bản giao diện** hiện đại, custom notifications và icon desktop đẹp mắt!
+Ứng dụng dịch truyện tự động sử dụng Google AI (Gemini) 
 
-## 🎉 Mới trong v2.0
+### **Desktop Modern GUI (CustomTkinter)** 
+- Giao diện desktop hiện đại với clean sidebar
+- **Stop/Continue functionality** với visual feedback
+- Dark/Light theme toggle buttons
+- Progress bars và speed monitoring real-time
+- Custom dialogs và toast notifications
 
-### 🎨 Custom UI & Notifications
-- ✅ **Custom popup dialogs** với giao diện hiện đại và animation
-- 🎊 **Toast notifications** với slide-in effects
-- 🎭 **Icon desktop** custom với gradient và robot AI design
-- 🌈 **Glass morphism effects** và gradient backgrounds
-- 📱 **Responsive design** với backdrop-filter blur
-- 💎 **Modern color schemes** với 3 themes khác nhau
-
-## 🎨 3 Phiên bản giao diện
-
-### 1. 🌐 **Web GUI (Gradio)** - Khuyến nghị ⭐
-- Giao diện web hiện đại với CSS tùy chỉnh và glass morphism
-- Chạy trên trình duyệt tại `http://localhost:7860`
-- Hiệu ứng gradient, backdrop-filter blur, responsive design
-- Toast notifications và progress tracking real-time
-- Có thể chia sẻ public link
-
-### 2. 💎 **Desktop GUI (CustomTkinter)** 
-- Giao diện desktop hiện đại với custom dialog popups
-- Dark/Light theme với modern styling và shadows
-- Native desktop experience với toast notifications
-- Progress bars và logging real-time
-
-### 3. 🖥️ **Classic GUI (Tkinter)**
-- Giao diện desktop truyền thống với tabs
-- Ổn định, tương thích tốt với mọi hệ điều hành
-- Full-featured với complete logging system
 
 ## 🚀 Quick Start
 
-### 🎮 Launcher tổng hợp (Mới!)
+### 🎮 Launcher tổng hợp
 ```bash
 python run_gui.py
 ```
-**Chọn giao diện phù hợp:** Web, Desktop hiện đại, hay Classic
-
 ### 📥 Download ngay (Classic GUI - Không cần cài đặt)
 **[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
-
-✅ Chạy trực tiếp trên Windows  
-✅ Không cần Python hay dependencies  
-✅ Giao diện GUI đầy đủ với 4 tabs chuyên biệt  
 
 ### 🔑 Cần có:
 - Google AI API Key (miễn phí tại [aistudio.google.com](https://aistudio.google.com/))
 - File truyện định dạng .txt
 
-## ✨ Tính năng chính
-
-### 🎨 UI & UX
-- 🎭 **Custom icons**: Icon desktop gradient với robot AI design
-- 🎊 **Modern dialogs**: Custom popup thay thế messagebox cũ
-- 🌈 **Toast notifications**: Thông báo hiện đại với slide-in animation
-- 💎 **Glass morphism**: Hiệu ứng backdrop-filter blur cho web UI
-- 🎨 **3 phiên bản giao diện**: Web (Gradio), Desktop hiện đại (CustomTkinter), Classic (Tkinter)
 
 ### ⚡ Performance & Features  
-- 🚀 **Multi-threading**: Dịch nhanh với 10 threads song song
+- 🚀 **Smart multi-threading**: Auto-detect CPU và setup threads tối ưu
+- 📊 **Real-time monitoring**: Speed tracking với lines/second
 - 🎯 **8 bối cảnh dịch**: Hiện đại, cổ đại, fantasy, học đường, công sở, lãng mạn, hành động, tùy chỉnh
 - 📝 **Tự động reformat**: Loại bỏ dòng trống thừa sau khi dịch
 - 📚 **Convert sang EPUB**: Chuyển đổi từ TXT sang DOCX sang EPUB
-- 📊 **Progress tracking**: Theo dõi tiến độ dịch real-time với logs chi tiết
 - 💾 **Lưu cài đặt**: Tự động lưu API key và preferences
-- 🔄 **Resume**: Tự động tiếp tục từ vị trí dừng nếu bị gián đoạn
-- 📁 **Tự động tạo tên file**: Không cần chỉ định file output, tự động tạo với suffix "_TranslateAI"
-- 🎯 **Smart file management**: Tự động reset tên output khi chọn file mới, tránh ghi đè
-- 🔧 **Multi-tab interface**: Giao diện tab quản lý chức năng (Dịch, Cài đặt, EPUB, Logs)
-- 📝 **Real-time logging**: Hiển thị logs từ engine dịch lên GUI real-time
+- 📁 **Smart file management**: Auto-generate tên output, prevent overwrites
 
 ## 📋 Yêu cầu
 
@@ -109,7 +69,7 @@ pip install -r requirements.txt
 - **Windows**: Tải tại https://pandoc.org/installing.html
 - **macOS**: `brew install pandoc` 
 - **Linux**: `sudo apt install pandoc`
-- Cập nhật đường dẫn Pandoc trong file `src/ConvertEpub.py`
+- Cập nhật đường dẫn Pandoc trong file `src/core/ConvertEpub.py`
 
 ### 4. Chạy launcher
 ```bash
@@ -126,17 +86,23 @@ python run_gui.py
 
 ### Phương pháp 2: GUI từ source code
 ```bash
-cd src
-python gui_simple.py
+# Modern Desktop GUI (Khuyến nghị)
+python src/gui/gui_modern.py
+
+# Web GUI với Glass Morphism
+python src/gui/gui_web.py
+
+# Classic GUI với Tabs
+python src/gui/gui_simple.py
 ```
 
 ### Phương pháp 3: Command line
 ```bash
-cd src
+cd src/core
 python translate.py
 ```
 
-### Phương pháp 4: Build exe từ source (Mới! - Tất cả UI variants)
+### Phương pháp 4: Build exe từ source
 ```bash
 # Build tất cả phiên bản GUI
 python build_all.py
@@ -150,12 +116,6 @@ dist/TranslateNovelAI_Web/TranslateNovelAI_Web.exe       # Web GUI
 dist/TranslateNovelAI_Modern/TranslateNovelAI_Modern.exe # Modern GUI  
 dist/TranslateNovelAI_Classic/TranslateNovelAI_Classic.exe # Classic GUI
 dist/TranslateNovelAI_Launcher/TranslateNovelAI_Launcher.exe # GUI Launcher
-```
-
-### 📦 Create Installer (Optional)
-```bash
-# Tạo NSIS installer (cần cài NSIS)
-makensis installer.nsi  # File sẽ được tạo bởi build_all.py
 ```
 
 ## 🔑 Cấu hình API Key
@@ -179,7 +139,7 @@ Tạo/chỉnh sửa file `settings.json`:
   "auto_convert_epub": false,
   "book_author": "Unknown Author",
   "chapter_pattern": "^Chương\\s+\\d+:\\s+.*$",
-  "threads": "10",
+  "threads": "20",
   "chunk_size": "100"
 }
 ```
@@ -189,155 +149,66 @@ Tạo/chỉnh sửa file `settings.json`:
 2. Nhập API Key vào ô tương ứng
 3. Click "💾 Lưu Cài Đặt" để lưu lại
 
-## 📝 Hướng dẫn sử dụng GUI
+## 📝 Hướng dẫn sử dụng Modern GUI
 
-### Tab 1: 🚀 Dịch Truyện
+### ⚙️ Settings và Controls
 
-#### Bước 1: Cấu hình API
-1. Nhập **Google AI API Key** vào ô "API Key"
-2. Chọn **Model** (khuyến nghị: `gemini-2.0-flash`)
+#### Performance Settings
+- **Threads**: Auto-detect dựa trên CPU cores (CPU x2, max 20)
+- **Chunk Size**: Điều chỉnh dựa trên độ phức tạp nội dung
 
-#### Bước 2: Chọn file
-1. Click **Browse** ở phần "Input File"
-2. Chọn file truyện (.txt) cần dịch
-3. File output sẽ được **tự động tạo tên** (ví dụ: `novel.txt` → `novel_TranslateAI.txt`)
-4. Click **🔄 Reset** để tái tạo tên output nếu cần
-
-#### Bước 3: Cấu hình options
-- ✅ **Tự động reformat**: Loại bỏ dòng trống thừa (khuyến nghị bật)
-- ✅ **Convert EPUB**: Tự động chuyển đổi sang EPUB sau khi dịch
-
-#### Bước 4: Bắt đầu dịch
-1. Click **🚀 Bắt Đầu Dịch**
-2. Theo dõi progress bar và logs real-time
-3. Quá trình sẽ tự động chuyển sang tab Logs để hiển thị chi tiết
-
-### Tab 2: ⚙️ Cài Đặt
-- **API Settings**: Cấu hình API key và model
-- **Translation Settings**: Tùy chọn reformat và EPUB
-- **Performance Settings**: Số threads và chunk size
-- **Save/Load**: Lưu và tải cài đặt
-
-### Tab 3: 📚 EPUB
-- **EPUB Settings**: Tiêu đề sách, tác giả, pattern chương
-- **Manual Conversion**: Convert file TXT sang EPUB thủ công
-- **Hướng dẫn**: Thông tin về yêu cầu Pandoc
-
-### Tab 4: 📝 Logs
-- **Log Controls**: Xóa logs, lưu logs, auto-scroll
-- **Full Log Display**: Hiển thị đầy đủ logs từ quá trình dịch
-
-## 🎨 Giao diện mới
-
-### Tab "🚀 Dịch Truyện"
+#### Control Buttons Layout
 ```
-🤖 TranslateNovelAI
-┌─────────────────────────────────────────────────────────┐
-│ [🚀 Dịch Truyện] [⚙️ Cài Đặt] [📚 EPUB] [📝 Logs]    │
-├─────────────────────────────────────────────────────────┤
-│ 🔑 API Configuration                                    │
-│ Google AI API Key: [**********]                        │
-│ Model: [gemini-2.0-flash ▼]                            │
-│                                                         │
-│ 📁 File Selection                                       │
-│ Input File: [C:\novel.txt] [Browse]                     │
-│ Output File: [C:\novel_TranslateAI.txt] [Browse][Reset] │
-│                                                         │
-│ ⚙️ Options                                             │
-│ ☑ Tự động reformat file sau khi dịch                   │
-│ ☑ Tự động convert sang EPUB sau khi dịch               │
-│                                                         │
-│ 📝 Logs (Xem chi tiết ở tab Logs)                      │
-│ [14:30:25] 🚀 Bắt đầu quá trình dịch...                │
-│ [14:30:25] 📁 Input: novel.txt                         │
-│ [14:30:26] ✅ Hoàn thành chunk 1/100                   │
-└─────────────────────────────────────────────────────────┘
+[🚀 Bắt Đầu Dịch]    [💾 Lưu Cài Đặt]
+[☀️ Light Mode]      [🌙 Dark Mode]
 ```
 
-## 🚨 Thay đổi quan trọng
+#### EPUB Settings (nếu bật Auto Convert)
+- **Tiêu đề sách**: Tự động từ tên file hoặc nhập thủ công
+- **Tác giả**: Mặc định "Unknown Author"
+- **Chapter Pattern**: Regex để nhận diện chương
 
-### ❌ Đã loại bỏ button "Dừng"
-- Để đơn giản hóa giao diện
-- Nếu cần dừng, có thể đóng ứng dụng trực tiếp
-- Tiến độ vẫn được lưu và có thể tiếp tục sau
+## 🎨 Screenshots & Demo
 
-### 🎯 Cải thiện Smart File Management
-- **Tự động reset tên output** khi chọn file input mới
-- **Nút Reset** để tái tạo tên output bất cứ lúc nào
-- **Validation**: Cảnh báo khi file output đã tồn tại
-- **Auto-sync**: EPUB input tự động đồng bộ với file đang dịch
-
-## 🐛 Xử lý lỗi thường gặp
-
-1. **"Không thể import module dịch"**
-   - Đảm bảo files `translate.py`, `reformat.py`, `ConvertEpub.py` ở cùng thư mục
-   - Kiểm tra đường dẫn files
-
-2. **"API Key không hợp lệ"**
-   - Kiểm tra API key tại [Google AI Studio](https://aistudio.google.com/)
-   - Đảm bảo API key có quyền truy cập Gemini
-
-3. **"File input và output không thể giống nhau"**
-   - Sử dụng nút **🔄 Reset** để tự động tạo tên output mới
-   - Hoặc chọn thư mục khác cho file output
-
-4. **"Dịch chậm"**
-   - Kiểm tra kết nối internet
-   - Thử giảm số threads trong tab Cài đặt
-   - Chọn model nhẹ hơn (gemini-1.5-flash)
-
-5. **"Lỗi convert EPUB"**
-   - Kiểm tra đường dẫn Pandoc trong file `src/ConvertEpub.py`
-   - Đảm bảo đã cài đặt Pandoc
-   - Kiểm tra pattern nhận diện chương
-
-## 🔧 Cấu trúc dự án
-
+### 💎 Modern Desktop GUI v1.1.0
 ```
-TranslateNovelAI/
-├── src/
-│   ├── core/                    # Core modules
-│   │   ├── __init__.py
-│   │   ├── translate.py         # Engine dịch với multi-threading
-│   │   ├── reformat.py          # Format text loại bỏ dòng trống thừa
-│   │   └── ConvertEpub.py       # Chuyển đổi TXT → DOCX → EPUB
-│   ├── gui/                     # GUI modules
-│   │   ├── __init__.py
-│   │   ├── gui_web.py           # Web UI (Gradio) với glass morphism
-│   │   ├── gui_modern.py        # Modern Desktop UI (CustomTkinter)
-│   │   ├── gui_simple.py        # Classic Desktop UI (Tkinter) với 4 tabs
-│   │   └── custom_dialogs.py    # Custom dialog system v2.0
-│   ├── assets/                  # Resources & Icons
-│   │   ├── __init__.py
-│   │   ├── create_icon.py       # Icon generation script
-│   │   ├── app_icon.ico         # Application icon
-│   │   ├── success_icon.png     # Success notification icon
-│   │   └── icon_*.png           # Various sized icons
-│   └── __init__.py
-├── run_gui.py                   # Universal launcher with dependency check
-├── build_all.py                 # Universal build script cho tất cả GUI variants
-├── requirements.txt             # Dependencies: google-generativeai, customtkinter, gradio...
-├── README.md                    # Documentation v2.0
-├── CHANGELOG.md                 # Version history
-└── settings.json                # User configuration (auto-generated)
+🤖 TranslateNovelAI - Modern Edition
+┌────────────────────────────────────────────────────────────────┐
+│ 🔑 API Configuration           │  📁 File Management            │
+│ API Key: [**********]          │  Input: [novel.txt] [Browse]    │
+│ Model: [gemini-2.0-flash ▼]    │  Output: [novel_AI.txt] [Reset] │
+│ Context: [Bối cảnh hiện đại ▼] │                                 │
+│                                │  📊 Progress                    │
+│ ⚡ Performance                 │  ████████░░ 80% (143 lines/s)   │
+│ Threads: [20]                  │                                 │
+│ Chunk Size: [100]              │  📝 Logs                        │
+│                                │  [15:30:25] ✅ Hoàn thành...   │
+│ ⚙️ Settings                   │  [15:30:26] 🔄 Auto reformat.. │
+│ ☑ Auto reformat               │                                 │
+│ ☑ Auto convert EPUB           │                                 │
+│                                │                                 │
+│ [🚀 Bắt Đầu Dịch] [💾 Lưu]     │                                 │
+│ [☀️ Light Mode] [🌙 Dark]      │                                 │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-## 🆕 Tính năng mới
+## 🔧 Performance Tips
 
-- **🔄 Auto-reset output filename**: Tự động tạo tên file mới khi chọn input mới
-- **📊 Real-time progress tracking**: Cập nhật progress bar từ logs engine dịch
-- **🎛️ Multi-tab interface**: Tách riêng chức năng thành 4 tabs chuyên biệt
-- **📝 Dual logging**: Mini log trong tab dịch + full log riêng biệt
-- **🔧 Enhanced validation**: Kiểm tra file trùng lặp, cảnh báo ghi đè
-- **🎯 Smart suggestions**: Tự động suggest file dịch cho EPUB conversion
+### 🚀 Tối ưu tốc độ dịch
+1. **Auto-detect threads**: App tự động detect CPU cores và setup tối ưu
+2. **Chunk size**: 
+   - Nội dung đơn giản: 150-200 dòng
+   - Nội dung phức tạp: 50-100 dòng
+3. **Model selection**:
+   - Nhanh nhất: `gemini-2.0-flash`
+   - Cân bằng: `gemini-1.5-flash`
+   - Chất lượng cao: `gemini-1.5-pro`
 
-## 💡 Tips sử dụng
-
-1. **Để có kết quả tốt nhất**: Sử dụng model `gemini-2.0-flash`
-2. **Tối ưu tốc độ**: Điều chỉnh số threads trong tab Cài đặt (mặc định: 10)
-3. **EPUB conversion**: Đảm bảo pattern chương chính xác (mặc định: `^Chương\s+\d+:\s+.*$`)
-4. **Theo dõi tiến độ**: Chuyển sang tab Logs để xem chi tiết quá trình dịch
-5. **Backup settings**: Click "💾 Lưu Cài Đặt" sau khi cấu hình
+### 💾 Stop/Continue Best Practices
+1. **Safe stopping**: Luôn sử dụng button "🛑 Dừng Dịch" thay vì force close
+2. **Progress backup**: File `.progress.json` được tạo tự động
+3. **Resume smart**: App tự động detect và suggest tiếp tục
+4. **Cleanup**: Progress file được xóa khi hoàn thành
 
 ## 📄 License
 
@@ -345,64 +216,26 @@ MIT License - Sử dụng tự do cho mục đích cá nhân và thương mại.
 
 ---
 
-## 🎭 Screenshots & Demo
+## 🎭 Features Comparison
 
-### 🌐 Web GUI với Glass Morphism
-*Chạy với: `python src/gui_web.py` hoặc từ launcher*
-
-### 💎 Desktop Modern với Custom Dialogs  
-*Chạy với: `python src/gui_modern.py` hoặc từ launcher*
-
-### 🖥️ Desktop Classic với Full Features
-*Chạy với: `python src/gui_simple.py` hoặc từ launcher*
-
-## 🔧 Troubleshooting v2.0
-
-### ❓ Lỗi Custom Dialogs
-```bash
-# Nếu custom dialogs không hiển thị
-pip install customtkinter>=5.2.0 pillow>=9.0.0
-
-# App sẽ tự động fallback về messagebox nếu có lỗi
-```
-
-### ❓ Lỗi Icon không hiển thị
-```bash
-# Tạo lại icons
-python assets/create_icon.py
-
-# Icons sẽ được tạo: app_icon.ico, success_icon.png
-```
-
-### ❓ Lỗi Build All
-```bash
-# Cài đặt PyInstaller
-pip install pyinstaller
-
-# Build từng phiên bản riêng nếu build_all thất bại
-python build.py         # Classic GUI
-python build_simple.py  # Alternative build
-```
-
-## 🏆 What's Next
-
-### 🔮 v2.1 Preview
-- 🌙 **Dark Mode Toggle**: Manual theme switching
-- 🎵 **Sound Effects**: Audio feedback for completion  
-- ⌨️ **Keyboard Shortcuts**: Hotkeys for common actions
-- 📊 **Advanced Progress**: Circular progress indicators
-
-### 🚀 v3.0 Vision  
-- 🔗 **Cloud Integration**: Sync settings across devices
-- 📱 **Mobile Interface**: Full mobile web support
-- 🎭 **Theme Marketplace**: Community-created themes
-- 🤖 **AI Improvements**: Multiple AI provider support
-
+| Feature | Modern GUI | Web GUI | Classic GUI |
+|---------|------------|---------|-------------|
+| Stop/Continue | ✅ | ❌ | ❌ |
+| Speed Monitoring | ✅ | ✅ | ✅ |
+| Auto-detect CPU | ✅ | ✅ | ✅ |
+| Custom Dialogs | ✅ | ❌ | ❌ |
+| Light/Dark Toggle | ✅ | ❌ | ❌ |
+| Progress Recovery | ✅ | ✅ | ✅ |
+| EPUB Convert | ✅ | ✅ | ✅ |
+| Multi-threading | ✅ | ✅ | ✅ |
 ---
 
 **Happy Translating! 🎉**
 
-*v2.0 - Powered by Custom UI, Modern Notifications & Beautiful Icons*
+*v1.1.0 - Powered by Stop/Continue, Auto-detect CPU & Modern UI*
 
 **⭐ Star this repo if you find it useful! ⭐**
 
+📧 **Support**: [GitHub Issues](https://github.com/nguyenvinhdat642/TranlateNovelAI/issues)  
+🔄 **Updates**: [Releases](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases)  
+📖 **Documentation**: [Wiki](https://github.com/nguyenvinhdat642/TranlateNovelAI/wiki) 

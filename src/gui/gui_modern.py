@@ -51,7 +51,7 @@ EPUB_AVAILABLE = False
 
 # Try relative imports first (when run as module)
 try:
-    from ..core.translate import translate_file_optimized, generate_output_filename
+    from ..core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped
     from ..core.reformat import fix_text_format
     from ..core.ConvertEpub import txt_to_docx, docx_to_epub
     TRANSLATE_AVAILABLE = True
@@ -59,7 +59,7 @@ try:
 except ImportError:
     # Try absolute imports (when run directly)
     try:
-        from core.translate import translate_file_optimized, generate_output_filename
+        from core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped
         from core.reformat import fix_text_format
         from core.ConvertEpub import txt_to_docx, docx_to_epub
         TRANSLATE_AVAILABLE = True
@@ -77,6 +77,15 @@ except ImportError:
             """Generate output filename as fallback"""
             base_name = os.path.splitext(input_file)[0]
             return f"{base_name}_translated.txt"
+        
+        def set_stop_translation():
+            print("❌ Chức năng dừng dịch không khả dụng")
+            
+        def clear_stop_translation():
+            print("❌ Chức năng dừng dịch không khả dụng")
+            
+        def is_translation_stopped():
+            return False
             
         def fix_text_format(*args, **kwargs):
             print("❌ Chức năng reformat không khả dụng")
@@ -123,7 +132,7 @@ class ModernTranslateNovelAI(ctk.CTk):
         
         # Configure window
         self.title("🤖 TranslateNovelAI - Modern Edition")
-        self.geometry("1000x600")
+        self.geometry("1100x650")
         self.minsize(1000, 600)
         
         # Variables
@@ -136,7 +145,8 @@ class ModernTranslateNovelAI(ctk.CTk):
         self.auto_convert_epub_var = ctk.BooleanVar(value=False)
         self.book_title_var = ctk.StringVar()
         self.book_author_var = ctk.StringVar(value="Unknown Author")
-        self.chapter_pattern_var = ctk.StringVar(value=r"^Chương\s+\d+:\s+.*$")
+        self.chapter_pattern_var = ctk.StringVar(value="Chương XX:")
+        self.custom_chapter_pattern_var = ctk.StringVar(value=r"^Chương\s+\d+:\s+.*$")
         self.threads_var = ctk.StringVar()
         self.chunk_size_var = ctk.StringVar(value="100")
         
@@ -160,6 +170,9 @@ class ModernTranslateNovelAI(ctk.CTk):
         # Load settings
         self.load_settings()
         
+        # Update appearance buttons after loading
+        self.after(100, self.update_appearance_buttons)
+        
     def setup_gui(self):
         """Thiết lập giao diện chính"""
         # Configure grid layout (3x1)
@@ -179,7 +192,7 @@ class ModernTranslateNovelAI(ctk.CTk):
         """Thiết lập sidebar bên trái"""
         self.sidebar_frame = ctk.CTkFrame(self, width=280, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        self.sidebar_frame.grid_rowconfigure(10, weight=1)
+        self.sidebar_frame.grid_columnconfigure(0, weight=1)
         
         # App title
         self.logo_label = ctk.CTkLabel(
@@ -187,14 +200,14 @@ class ModernTranslateNovelAI(ctk.CTk):
             text="🤖 TranslateNovelAI",
             font=ctk.CTkFont(size=24, weight="bold")
         )
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
         
         self.version_label = ctk.CTkLabel(
             self.sidebar_frame,
             text="Modern Edition v2.0",
             font=ctk.CTkFont(size=12)
         )
-        self.version_label.grid(row=1, column=0, padx=20, pady=(0, 20))
+        self.version_label.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="ew")
         
         # API Configuration
         self.api_label = ctk.CTkLabel(
@@ -202,7 +215,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             text="🔑 API Configuration",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        self.api_label.grid(row=2, column=0, padx=20, pady=(10, 5))
+        self.api_label.grid(row=2, column=0, padx=20, pady=(10, 5), sticky="ew")
         
         self.api_key_entry = ctk.CTkEntry(
             self.sidebar_frame,
@@ -211,7 +224,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             show="*",
             width=240
         )
-        self.api_key_entry.grid(row=3, column=0, padx=20, pady=5)
+        self.api_key_entry.grid(row=3, column=0, padx=20, pady=5, sticky="ew")
         
         self.model_combo = ctk.CTkComboBox(
             self.sidebar_frame,
@@ -219,7 +232,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             variable=self.model_var,
             width=240
         )
-        self.model_combo.grid(row=4, column=0, padx=20, pady=5)
+        self.model_combo.grid(row=4, column=0, padx=20, pady=5, sticky="ew")
         
         self.context_combo = ctk.CTkComboBox(
             self.sidebar_frame,
@@ -237,7 +250,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             command=self.on_context_changed,
             width=240
         )
-        self.context_combo.grid(row=5, column=0, padx=20, pady=5)
+        self.context_combo.grid(row=5, column=0, padx=20, pady=5, sticky="ew")
         
         # Performance Settings
         self.performance_label = ctk.CTkLabel(
@@ -245,7 +258,7 @@ class ModernTranslateNovelAI(ctk.CTk):
             text="⚡ Performance",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        self.performance_label.grid(row=6, column=0, padx=20, pady=(20, 5))
+        self.performance_label.grid(row=6, column=0, padx=20, pady=(20, 5), sticky="ew")
         
         # Threads setting
         self.threads_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
@@ -267,18 +280,9 @@ class ModernTranslateNovelAI(ctk.CTk):
         )
         self.threads_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
         
-        self.auto_threads_btn = ctk.CTkButton(
-            self.sidebar_frame,
-            text="🔧 Auto Detect",
-            command=self.auto_detect_threads,
-            width=120,
-            height=28
-        )
-        self.auto_threads_btn.grid(row=8, column=0, padx=20, pady=2)
-        
         # Chunk size setting
         self.chunk_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
-        self.chunk_frame.grid(row=9, column=0, padx=20, pady=5, sticky="ew")
+        self.chunk_frame.grid(row=8, column=0, padx=20, pady=5, sticky="ew")
         self.chunk_frame.grid_columnconfigure(1, weight=1)
         
         self.chunk_label = ctk.CTkLabel(
@@ -302,61 +306,83 @@ class ModernTranslateNovelAI(ctk.CTk):
             text="⚙️ Settings",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        self.settings_label.grid(row=10, column=0, padx=20, pady=(20, 5))
+        self.settings_label.grid(row=9, column=0, padx=20, pady=(20, 5), sticky="ew")
         
         self.auto_reformat_check = ctk.CTkCheckBox(
             self.sidebar_frame,
             text="Auto reformat",
             variable=self.auto_reformat_var
         )
-        self.auto_reformat_check.grid(row=11, column=0, padx=20, pady=5, sticky="w")
+        self.auto_reformat_check.grid(row=10, column=0, padx=20, pady=5, sticky="w")
         
         self.auto_epub_check = ctk.CTkCheckBox(
             self.sidebar_frame,
             text="Auto convert EPUB",
-            variable=self.auto_convert_epub_var
+            variable=self.auto_convert_epub_var,
+            command=self.on_epub_setting_changed
         )
-        self.auto_epub_check.grid(row=12, column=0, padx=20, pady=5, sticky="w")
+        self.auto_epub_check.grid(row=11, column=0, padx=20, pady=5, sticky="w")
         
-        # Control buttons
+        # Control buttons - Grid 1x2 Layout
+        self.control_grid_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
+        self.control_grid_frame.grid(row=12, column=0, padx=20, pady=10, sticky="ew")
+        
+        # Configure grid columns với weight đều nhau
+        for i in range(2):
+            self.control_grid_frame.grid_columnconfigure(i, weight=1, uniform="buttons")
+        
+        # Row 1: Main controls
         self.translate_btn = ctk.CTkButton(
-            self.sidebar_frame,
+            self.control_grid_frame,
             text="🚀 Bắt Đầu Dịch",
-            command=self.start_translation,
+            command=self.toggle_translation,
             height=40,
-            font=ctk.CTkFont(size=14, weight="bold")
+            font=ctk.CTkFont(size=12, weight="bold")
         )
-        self.translate_btn.grid(row=13, column=0, padx=20, pady=10)
+        self.translate_btn.grid(row=0, column=0, padx=(0, 5), pady=(0, 5), sticky="ew")
         
         self.save_settings_btn = ctk.CTkButton(
-            self.sidebar_frame,
+            self.control_grid_frame,
             text="💾 Lưu Cài Đặt",
             command=self.save_settings,
-            height=35
+            height=40
         )
-        self.save_settings_btn.grid(row=14, column=0, padx=20, pady=5)
+        self.save_settings_btn.grid(row=0, column=1, padx=(5, 0), pady=(0, 5), sticky="ew")
         
-        # Appearance mode
-        self.appearance_mode_label = ctk.CTkLabel(
-            self.sidebar_frame,
-            text="Appearance Mode:",
-            anchor="w"
-        )
-        self.appearance_mode_label.grid(row=15, column=0, padx=20, pady=(20, 0), sticky="w")
+        # Row 2: Appearance toggle
+        # Appearance toggle frame
+        self.appearance_frame = ctk.CTkFrame(self.control_grid_frame, fg_color="transparent")
+        self.appearance_frame.grid(row=1, column=0, columnspan=2, padx=0, pady=(5, 0), sticky="ew")
+        self.appearance_frame.grid_columnconfigure(0, weight=1)
+        self.appearance_frame.grid_columnconfigure(1, weight=1)
         
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(
-            self.sidebar_frame,
-            values=["Light", "Dark", "System"],
-            command=self.change_appearance_mode_event
+        # Light/Dark toggle buttons
+        self.light_mode_btn = ctk.CTkButton(
+            self.appearance_frame,
+            text="☀️ Light Mode",
+            command=self.set_light_mode,
+            height=40,
+            font=ctk.CTkFont(size=12)
         )
-        self.appearance_mode_optionemenu.grid(row=16, column=0, padx=20, pady=(5, 20))
+        self.light_mode_btn.grid(row=0, column=0, padx=(0, 2), sticky="ew")
+        
+        self.dark_mode_btn = ctk.CTkButton(
+            self.appearance_frame,
+            text="🌙 Dark Mode",
+            command=self.set_dark_mode,
+            height=40,
+            font=ctk.CTkFont(size=12)
+        )
+        self.dark_mode_btn.grid(row=0, column=1, padx=(2, 0), sticky="ew")
+        
+        # Initialize appearance button colors
+        self.update_appearance_buttons()
         
     def setup_main_content(self):
         """Thiết lập nội dung chính"""
-        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame = ctk.CTkScrollableFrame(self)
         self.main_frame.grid(row=0, column=1, sticky="nsew", padx=10)
         self.main_frame.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure(3, weight=1)
         
         # Title
         self.main_title = ctk.CTkLabel(
@@ -428,9 +454,81 @@ class ModernTranslateNovelAI(ctk.CTk):
         )
         self.reset_output_btn.grid(row=0, column=1)
         
+        # EPUB Settings (initially hidden)
+        self.epub_frame = ctk.CTkFrame(self.main_frame)
+        self.epub_frame.grid_columnconfigure(0, weight=1)
+        
+        self.epub_title_label = ctk.CTkLabel(
+            self.epub_frame,
+            text="📚 EPUB Settings",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        self.epub_title_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        
+        self.book_title_entry = ctk.CTkEntry(
+            self.epub_frame,
+            textvariable=self.book_title_var,
+            placeholder_text="Tiêu đề sách"
+        )
+        self.book_title_entry.grid(row=1, column=0, padx=20, pady=5, sticky="ew")
+        
+        self.book_author_entry = ctk.CTkEntry(
+            self.epub_frame,
+            textvariable=self.book_author_var,
+            placeholder_text="Tác giả"
+        )
+        self.book_author_entry.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
+        
+        # Chapter header pattern selection
+        self.chapter_pattern_label = ctk.CTkLabel(
+            self.epub_frame,
+            text="Định dạng tiêu đề chương:",
+            font=ctk.CTkFont(weight="bold")
+        )
+        self.chapter_pattern_label.grid(row=3, column=0, padx=20, pady=(10, 5), sticky="w")
+        
+        self.chapter_pattern_combo = ctk.CTkComboBox(
+            self.epub_frame,
+            values=[
+                "Chương XX:",
+                "Chương XX",
+                "XXX",
+                "XXX:",
+                "Phần X:",
+                "Phần X",
+                "Chapter X:",
+                "Chapter X",
+                "第X章",
+                "第X章:",
+                "Tùy chỉnh"
+            ],
+            variable=self.chapter_pattern_var,
+            command=self.on_chapter_pattern_changed,
+            width=240
+        )
+        self.chapter_pattern_combo.grid(row=4, column=0, padx=20, pady=5, sticky="ew")
+        
+        # Custom pattern entry (hidden by default)
+        self.custom_pattern_frame = ctk.CTkFrame(self.epub_frame, fg_color="transparent")
+        self.custom_pattern_frame.grid_columnconfigure(0, weight=1)
+        
+        self.custom_pattern_label = ctk.CTkLabel(
+            self.custom_pattern_frame,
+            text="Regex pattern tùy chỉnh:",
+            font=ctk.CTkFont(size=12)
+        )
+        self.custom_pattern_label.grid(row=0, column=0, padx=20, pady=(5, 2), sticky="w")
+        
+        self.custom_pattern_entry = ctk.CTkEntry(
+            self.custom_pattern_frame,
+            textvariable=self.custom_chapter_pattern_var,
+            placeholder_text="Nhập regex pattern..."
+        )
+        self.custom_pattern_entry.grid(row=1, column=0, padx=20, pady=(2, 10), sticky="ew")
+
         # Progress frame
         self.progress_frame = ctk.CTkFrame(self.main_frame)
-        self.progress_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
+        self.progress_frame.grid(row=3, column=0, sticky="ew", padx=20, pady=10)
         self.progress_frame.grid_columnconfigure(0, weight=1)
         
         self.progress_label = ctk.CTkLabel(
@@ -467,38 +565,6 @@ class ModernTranslateNovelAI(ctk.CTk):
             height=100
         )
         self.custom_prompt_textbox.grid(row=1, column=0, padx=20, pady=(5, 20), sticky="ew")
-        
-        # EPUB Settings (initially hidden)
-        self.epub_frame = ctk.CTkFrame(self.main_frame)
-        self.epub_frame.grid_columnconfigure(0, weight=1)
-        
-        self.epub_title_label = ctk.CTkLabel(
-            self.epub_frame,
-            text="📚 EPUB Settings",
-            font=ctk.CTkFont(size=16, weight="bold")
-        )
-        self.epub_title_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        
-        self.book_title_entry = ctk.CTkEntry(
-            self.epub_frame,
-            textvariable=self.book_title_var,
-            placeholder_text="Tiêu đề sách"
-        )
-        self.book_title_entry.grid(row=1, column=0, padx=20, pady=5, sticky="ew")
-        
-        self.book_author_entry = ctk.CTkEntry(
-            self.epub_frame,
-            textvariable=self.book_author_var,
-            placeholder_text="Tác giả"
-        )
-        self.book_author_entry.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
-        
-        self.chapter_pattern_entry = ctk.CTkEntry(
-            self.epub_frame,
-            textvariable=self.chapter_pattern_var,
-            placeholder_text="Pattern nhận diện chương (regex)"
-        )
-        self.chapter_pattern_entry.grid(row=3, column=0, padx=20, pady=(5, 20), sticky="ew")
         
     def setup_right_panel(self):
         """Thiết lập panel logs bên phải"""
@@ -555,7 +621,7 @@ class ModernTranslateNovelAI(ctk.CTk):
     def on_context_changed(self, choice):
         """Xử lý khi thay đổi bối cảnh dịch"""
         if choice == "Tùy chỉnh":
-            self.custom_prompt_frame.grid(row=3, column=0, sticky="ew", padx=20, pady=10)
+            self.custom_prompt_frame.grid(row=4, column=0, sticky="ew", padx=20, pady=10)
             # Load default custom prompt
             default_custom = "Dịch văn bản sau sang tiếng Việt. Đảm bảo các câu thoại nhân vật được dịch chính xác và đặt trong dấu "". Đảm bảo giữ nguyên chi tiết nội dung."
             self.custom_prompt_textbox.delete("0.0", "end")
@@ -603,6 +669,31 @@ class ModernTranslateNovelAI(ctk.CTk):
             if not self.book_title_var.get() or self.book_title_var.get() == "Unknown Title":
                 filename = os.path.splitext(os.path.basename(file_path))[0]
                 self.book_title_var.set(filename)
+            
+            # Check if there's existing progress
+            progress_file = f"{file_path}.progress.json"
+            if os.path.exists(progress_file):
+                try:
+                    with open(progress_file, 'r', encoding='utf-8') as f:
+                        progress_data = json.load(f)
+                        completed_chunks = progress_data.get('completed_chunks', 0)
+                        if completed_chunks > 0:
+                            self.log(f"🔄 Phát hiện tiến độ cũ: {completed_chunks} chunks đã hoàn thành")
+                            self.translate_btn.configure(
+                                text="▶️ Tiếp Tục Dịch",
+                                fg_color=("blue", "darkblue"),
+                                hover_color=("darkblue", "blue")
+                            )
+                            self.progress_text.configure(text=f"Sẵn sàng tiếp tục ({completed_chunks} chunks đã xong)")
+                except Exception as e:
+                    self.log(f"⚠️ Lỗi đọc file tiến độ: {e}")
+            else:
+                self.translate_btn.configure(
+                    text="🚀 Bắt Đầu Dịch",
+                    fg_color=("blue", "darkblue"),
+                    hover_color=("darkblue", "blue")
+                )
+                self.progress_text.configure(text="Sẵn sàng để bắt đầu...")
     
     def browse_output_file(self):
         """Chọn file output"""
@@ -771,6 +862,32 @@ class ModernTranslateNovelAI(ctk.CTk):
             except Exception as e:
                 self.log(f"❌ Lỗi lưu logs: {e}")
     
+    def toggle_translation(self):
+        """Toggle giữa bắt đầu dịch và dừng dịch"""
+        if self.is_translating:
+            # Đang dịch -> Dừng
+            set_stop_translation()
+            self.log("🛑 Đã yêu cầu dừng dịch...")
+            self.translate_btn.configure(text="⏳ Đang dừng...", state="disabled")
+        else:
+            # Chưa dịch hoặc đã dừng -> Bắt đầu/Tiếp tục dịch
+            self.start_translation()
+    
+    def continue_translation(self):
+        """Tiếp tục dịch từ nơi đã dừng"""
+        # Kiểm tra xem có file input không
+        if not self.input_file_var.get().strip():
+            show_error("Vui lòng chọn file input trước!", parent=self)
+            return
+        
+        # Kiểm tra API key
+        if not self.api_key_var.get().strip():
+            show_error("Vui lòng nhập API Key!", parent=self)
+            return
+        
+        self.log("▶️ Tiếp tục dịch từ nơi đã dừng...")
+        self.start_translation()
+    
     def start_translation(self):
         """Bắt đầu quá trình dịch"""
         if not TRANSLATE_AVAILABLE:
@@ -801,18 +918,25 @@ class ModernTranslateNovelAI(ctk.CTk):
             show_error("File input và output không thể giống nhau!", parent=self)
             return
         
-        # Warn if output file exists
-        if os.path.exists(output_file):
-            result = show_question(
-                f"File output đã tồn tại:\n{os.path.basename(output_file)}\n\nBạn có muốn ghi đè không?",
-                parent=self
-            )
-            if not result:
-                return
+        # Warn if output file exists (only for new translation, not continue)
+        if not is_translation_stopped() and os.path.exists(output_file):
+            progress_file = f"{self.input_file_var.get()}.progress.json"
+            if not os.path.exists(progress_file):  # Only warn if not continuing
+                result = show_question(
+                    f"File output đã tồn tại:\n{os.path.basename(output_file)}\n\nBạn có muốn ghi đè không?",
+                    parent=self
+                )
+                if not result:
+                    return
         
         # Start translation
         self.is_translating = True
-        self.translate_btn.configure(state="disabled", text="⏳ Đang dịch...")
+        self.translate_btn.configure(
+            state="normal", 
+            text="🛑 Dừng Dịch",
+            fg_color=("red", "darkred"),
+            hover_color=("darkred", "red")
+        )
         self.progress_bar.set(0)
         self.progress_text.configure(text="Đang dịch...")
         
@@ -852,7 +976,252 @@ class ModernTranslateNovelAI(ctk.CTk):
             daemon=True
         )
         self.translation_thread.start()
+        
+        # Start monitoring translation status
+        self.check_translation_status()
     
+    def check_translation_status(self):
+        """Kiểm tra trạng thái dịch định kỳ"""
+        if self.is_translating:
+            if is_translation_stopped():
+                # Translation has been stopped
+                self.log("🛑 Dịch đã bị dừng")
+                self.is_translating = False
+                self.translate_btn.configure(
+                    state="normal", 
+                    text="▶️ Tiếp Tục Dịch",
+                    fg_color=("blue", "darkblue"),
+                    hover_color=("darkblue", "blue")
+                )
+                self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
+                self.restore_stdout()
+                return
+            else:
+                # Check again after 1 second
+                self.after(1000, self.check_translation_status)
+    
+    def translation_finished(self):
+        """Kết thúc quá trình dịch"""
+        self.is_translating = False
+        self.translate_btn.configure(
+            state="normal", 
+            text="🚀 Bắt Đầu Dịch",
+            fg_color=("blue", "darkblue"),
+            hover_color=("darkblue", "blue")
+        )
+        
+        # Restore stdout
+        self.restore_stdout()
+        
+        if not self.progress_text.cget("text").startswith("Hoàn thành"):
+            # Check if stopped or failed
+            if is_translation_stopped():
+                self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
+            else:
+                self.progress_text.configure(text="Sẵn sàng")
+    
+    def convert_to_epub(self, txt_file):
+        """Convert file to EPUB"""
+        if not EPUB_AVAILABLE:
+            self.log("❌ Không thể convert EPUB - thiếu module ConvertEpub")
+            return
+        
+        try:
+            # Generate file paths
+            base_name = os.path.splitext(txt_file)[0]
+            docx_file = base_name + ".docx"
+            epub_file = base_name + ".epub"
+            
+            # Get book info
+            title = self.book_title_var.get() or os.path.splitext(os.path.basename(txt_file))[0]
+            author = self.book_author_var.get() or "Unknown Author"
+            pattern = self.get_chapter_pattern()
+            
+            # Convert TXT to DOCX
+            self.log("📄 Đang convert TXT → DOCX...")
+            if txt_to_docx(txt_file, docx_file, title, pattern):
+                self.log("✅ Convert TXT → DOCX hoàn thành!")
+                
+                # Convert DOCX to EPUB
+                self.log("📚 Đang convert DOCX → EPUB...")
+                if docx_to_epub(docx_file, epub_file, title, author):
+                    self.log(f"✅ Convert EPUB hoàn thành: {epub_file}")
+                else:
+                    self.log("❌ Convert DOCX → EPUB thất bại")
+            else:
+                self.log("❌ Convert TXT → DOCX thất bại")
+                
+        except Exception as e:
+            self.log(f"❌ Lỗi convert EPUB: {e}")
+    
+    def save_settings(self):
+        """Lưu cài đặt"""
+        custom_prompt = ""
+        if hasattr(self, 'custom_prompt_textbox'):
+            custom_prompt = self.custom_prompt_textbox.get("0.0", "end").strip()
+            
+        settings = {
+            "api_key": self.api_key_var.get(),
+            "model": self.model_var.get(),
+            "context": self.context_var.get(),
+            "custom_prompt": custom_prompt,
+            "auto_reformat": self.auto_reformat_var.get(),
+            "auto_convert_epub": self.auto_convert_epub_var.get(),
+            "book_author": self.book_author_var.get(),
+            "chapter_pattern": self.chapter_pattern_var.get(),
+            "custom_chapter_pattern": self.custom_chapter_pattern_var.get(),
+            "threads": self.threads_var.get(),
+            "chunk_size": self.chunk_size_var.get()
+        }
+        
+        try:
+            with open("settings.json", "w", encoding="utf-8") as f:
+                json.dump(settings, f, indent=2, ensure_ascii=False)
+            self.log("💾 Đã lưu cài đặt")
+            show_success("Đã lưu cài đặt!", parent=self)
+        except Exception as e:
+            self.log(f"❌ Lỗi lưu cài đặt: {e}")
+            show_error(f"Lỗi lưu cài đặt: {e}", parent=self)
+    
+    def load_settings(self):
+        """Tải cài đặt"""
+        try:
+            if os.path.exists("settings.json"):
+                with open("settings.json", "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+                
+                self.api_key_var.set(settings.get("api_key", ""))
+                self.model_var.set(settings.get("model", "gemini-2.0-flash"))
+                self.context_var.set(settings.get("context", "Bối cảnh hiện đại"))
+                self.auto_reformat_var.set(settings.get("auto_reformat", True))
+                self.auto_convert_epub_var.set(settings.get("auto_convert_epub", False))
+                self.book_author_var.set(settings.get("book_author", "Unknown Author"))
+                self.chapter_pattern_var.set(settings.get("chapter_pattern", "Chương XX:"))
+                self.custom_chapter_pattern_var.set(settings.get("custom_chapter_pattern", r"^Chương\s+\d+:\s+.*$"))
+                
+                # Load threads - nếu không có trong settings thì auto-detect
+                threads_setting = settings.get("threads")
+                if threads_setting:
+                    self.threads_var.set(threads_setting)
+                else:
+                    self.auto_detect_threads(silent=True)
+                    
+                self.chunk_size_var.set(settings.get("chunk_size", "100"))
+                
+                # Load custom prompt if exists
+                if hasattr(self, 'custom_prompt_textbox') and settings.get("custom_prompt"):
+                    self.custom_prompt_textbox.delete("0.0", "end")
+                    self.custom_prompt_textbox.insert("0.0", settings.get("custom_prompt"))
+                
+                # Trigger context change to show/hide custom prompt
+                self.on_context_changed(self.context_var.get())
+                
+                # Trigger chapter pattern change to show/hide custom pattern
+                self.on_chapter_pattern_changed(self.chapter_pattern_var.get())
+                
+                # Trigger EPUB setting change to show/hide EPUB frame
+                self.on_epub_setting_changed()
+                
+                self.log("📂 Đã tải cài đặt")
+        except Exception as e:
+            self.log(f"⚠️ Lỗi tải cài đặt: {e}")
+    
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        """Thay đổi appearance mode"""
+        ctk.set_appearance_mode(new_appearance_mode)
+    
+    def on_closing(self):
+        """Xử lý khi đóng cửa sổ"""
+        try:
+            if self.is_translating:
+                result = show_question("Đang dịch. Bạn có chắc muốn thoát?\n\nTiến độ sẽ được lưu để tiếp tục sau.", parent=self)
+                if result:
+                    # Dừng tiến trình dịch
+                    set_stop_translation()
+                    self.log("🛑 Dừng tiến trình dịch do đóng app...")
+                    
+                    # Đợi một chút để translation threads có thể dừng
+                    time.sleep(0.5)
+                    
+                    self.cleanup_and_exit()
+                else:
+                    return  # Không đóng app
+            else:
+                self.cleanup_and_exit()
+        except Exception as e:
+            print(f"Lỗi khi đóng: {e}")
+            # Force exit
+            self.destroy()
+    
+    def cleanup_and_exit(self):
+        """Cleanup và thoát an toàn"""
+        try:
+            # Restore stdout
+            self.restore_stdout()
+            
+            # Cancel any running threads
+            if hasattr(self, 'translation_thread') and self.translation_thread:
+                # Note: Can't force stop threads, just set flag
+                self.is_translating = False
+            
+            # Clear any pending after calls
+            self.after_cancel("all")
+            
+        except Exception as e:
+            print(f"Lỗi cleanup: {e}")
+        finally:
+            # Force destroy
+            self.destroy()
+
+    def on_epub_setting_changed(self):
+        """Xử lý khi thay đổi cài đặt auto convert EPUB"""
+        if self.auto_convert_epub_var.get():
+            self.epub_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
+        else:
+            self.epub_frame.grid_remove()
+    
+    def on_chapter_pattern_changed(self, choice):
+        """Xử lý khi thay đổi chapter pattern"""
+        pattern_map = {
+            "Chương XX:": r"^Chương\s+\d+:\s+.*$",
+            "Chương XX": r"^Chương\s+\d+(?:\s+.*)?$",
+            "XXX": r"^\d{3}(?:\s+.*)?$",
+            "XXX:": r"^\d{3}:\s+.*$",
+            "Phần X:": r"^Phần\s+\d+:\s+.*$",
+            "Phần X": r"^Phần\s+\d+(?:\s+.*)?$",
+            "Chapter X:": r"^Chapter\s+\d+:\s+.*$",
+            "Chapter X": r"^Chapter\s+\d+(?:\s+.*)?$",
+            "第X章": r"^第\d+章(?:\s+.*)?$",
+            "第X章:": r"^第\d+章:\s+.*$"
+        }
+        
+        if choice == "Tùy chỉnh":
+            self.custom_pattern_frame.grid(row=5, column=0, sticky="ew", padx=0, pady=0)
+        else:
+            self.custom_pattern_frame.grid_remove()
+            # Cập nhật pattern tương ứng
+            if choice in pattern_map:
+                self.custom_chapter_pattern_var.set(pattern_map[choice])
+    
+    def get_chapter_pattern(self):
+        """Lấy chapter pattern hiện tại"""
+        if self.chapter_pattern_var.get() == "Tùy chỉnh":
+            return self.custom_chapter_pattern_var.get()
+        else:
+            pattern_map = {
+                "Chương XX:": r"^Chương\s+\d+:\s+.*$",
+                "Chương XX": r"^Chương\s+\d+(?:\s+.*)?$",
+                "XXX": r"^\d{3}(?:\s+.*)?$",
+                "XXX:": r"^\d{3}:\s+.*$",
+                "Phần X:": r"^Phần\s+\d+:\s+.*$",
+                "Phần X": r"^Phần\s+\d+(?:\s+.*)?$",
+                "Chapter X:": r"^Chapter\s+\d+:\s+.*$",
+                "Chapter X": r"^Chapter\s+\d+(?:\s+.*)?$",
+                "第X章": r"^第\d+章(?:\s+.*)?$",
+                "第X章:": r"^第\d+章:\s+.*$"
+            }
+            return pattern_map.get(self.chapter_pattern_var.get(), r"^Chương\s+\d+:\s+.*$")
+
     def run_translation(self, input_file, output_file, api_key, model_name, system_instruction, num_threads, chunk_size):
         """Chạy quá trình dịch"""
         try:
@@ -894,7 +1263,6 @@ class ModernTranslateNovelAI(ctk.CTk):
                 self.after(0, lambda: self.progress_bar.set(1.0))
                 show_success(f"Dịch hoàn thành!\nFile: {os.path.basename(output_file)}", 
                            details=f"Đường dẫn: {output_file}", parent=self)
-                show_toast_success("Dịch truyện hoàn thành thành công!")
             else:
                 self.log("❌ Dịch thất bại")
                 show_error("Quá trình dịch thất bại", parent=self)
@@ -904,153 +1272,83 @@ class ModernTranslateNovelAI(ctk.CTk):
             show_error(f"Đã xảy ra lỗi: {e}", details=str(e), parent=self)
         finally:
             self.after(0, self.translation_finished)
-    
-    def translation_finished(self):
-        """Kết thúc quá trình dịch"""
-        self.is_translating = False
-        self.translate_btn.configure(state="normal", text="🚀 Bắt Đầu Dịch")
-        
-        # Restore stdout
-        self.restore_stdout()
-        
-        if not self.progress_text.cget("text").startswith("Hoàn thành"):
-            self.progress_text.configure(text="Sẵn sàng")
-    
-    def convert_to_epub(self, txt_file):
-        """Convert file to EPUB"""
-        if not EPUB_AVAILABLE:
-            self.log("❌ Không thể convert EPUB - thiếu module ConvertEpub")
+
+    def test_api_connection(self):
+        """Test API connection"""
+        api_key = self.api_key_var.get().strip()
+        if not api_key:
+            show_error("Vui lòng nhập API Key trước!", parent=self)
             return
         
-        try:
-            # Generate file paths
-            base_name = os.path.splitext(txt_file)[0]
-            docx_file = base_name + ".docx"
-            epub_file = base_name + ".epub"
-            
-            # Get book info
-            title = self.book_title_var.get() or os.path.splitext(os.path.basename(txt_file))[0]
-            author = self.book_author_var.get() or "Unknown Author"
-            pattern = self.chapter_pattern_var.get() or r"^Chương\s+\d+:\s+.*$"
-            
-            # Convert TXT to DOCX
-            self.log("📄 Đang convert TXT → DOCX...")
-            if txt_to_docx(txt_file, docx_file, title, pattern):
-                self.log("✅ Convert TXT → DOCX hoàn thành!")
+        self.log("🧪 Đang test kết nối API...")
+        
+        # Test in background thread
+        def test_api():
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
                 
-                # Convert DOCX to EPUB
-                self.log("📚 Đang convert DOCX → EPUB...")
-                if docx_to_epub(docx_file, epub_file, title, author):
-                    self.log(f"✅ Convert EPUB hoàn thành: {epub_file}")
+                model = genai.GenerativeModel(self.model_var.get())
+                response = model.generate_content("Hello")
+                
+                if response.text:
+                    self.after(0, lambda: self.log("✅ Kết nối API thành công!"))
+                    self.after(0, lambda: show_success("Kết nối API thành công!", parent=self))
                 else:
-                    self.log("❌ Convert DOCX → EPUB thất bại")
-            else:
-                self.log("❌ Convert TXT → DOCX thất bại")
-                
-        except Exception as e:
-            self.log(f"❌ Lỗi convert EPUB: {e}")
+                    self.after(0, lambda: self.log("❌ API trả về response rỗng"))
+                    self.after(0, lambda: show_error("API trả về response rỗng", parent=self))
+                    
+            except Exception as e:
+                error_msg = str(e)
+                self.after(0, lambda: self.log(f"❌ Lỗi API: {error_msg}"))
+                self.after(0, lambda: show_error(f"Lỗi kết nối API:\n{error_msg}", parent=self))
+        
+        threading.Thread(target=test_api, daemon=True).start()
+
+    def set_light_mode(self):
+        """Set light mode và cập nhật button colors"""
+        ctk.set_appearance_mode("light")
+        self.update_appearance_buttons("light")
+        self.log("☀️ Đã chuyển sang Light Mode")
     
-    def save_settings(self):
-        """Lưu cài đặt"""
-        custom_prompt = ""
-        if hasattr(self, 'custom_prompt_textbox'):
-            custom_prompt = self.custom_prompt_textbox.get("0.0", "end").strip()
-            
-        settings = {
-            "api_key": self.api_key_var.get(),
-            "model": self.model_var.get(),
-            "context": self.context_var.get(),
-            "custom_prompt": custom_prompt,
-            "auto_reformat": self.auto_reformat_var.get(),
-            "auto_convert_epub": self.auto_convert_epub_var.get(),
-            "book_author": self.book_author_var.get(),
-            "chapter_pattern": self.chapter_pattern_var.get(),
-            "threads": self.threads_var.get(),
-            "chunk_size": self.chunk_size_var.get()
-        }
+    def set_dark_mode(self):
+        """Set dark mode và cập nhật button colors"""
+        ctk.set_appearance_mode("dark")
+        self.update_appearance_buttons("dark")
+        self.log("🌙 Đã chuyển sang Dark Mode")
+    
+    def update_appearance_buttons(self, current_mode=None):
+        """Cập nhật màu sắc appearance buttons dựa trên mode hiện tại"""
+        if current_mode is None:
+            # Get current appearance mode
+            try:
+                current_mode = ctk.get_appearance_mode().lower()
+            except:
+                current_mode = "dark"  # Default
         
         try:
-            with open("settings.json", "w", encoding="utf-8") as f:
-                json.dump(settings, f, indent=2, ensure_ascii=False)
-            self.log("💾 Đã lưu cài đặt")
-            show_success("Đã lưu cài đặt!", parent=self)
-            show_toast_success("Cài đặt đã được lưu")
-        except Exception as e:
-            self.log(f"❌ Lỗi lưu cài đặt: {e}")
-            show_error(f"Lỗi lưu cài đặt: {e}", parent=self)
-    
-    def load_settings(self):
-        """Tải cài đặt"""
-        try:
-            if os.path.exists("settings.json"):
-                with open("settings.json", "r", encoding="utf-8") as f:
-                    settings = json.load(f)
-                
-                self.api_key_var.set(settings.get("api_key", ""))
-                self.model_var.set(settings.get("model", "gemini-2.0-flash"))
-                self.context_var.set(settings.get("context", "Bối cảnh hiện đại"))
-                self.auto_reformat_var.set(settings.get("auto_reformat", True))
-                self.auto_convert_epub_var.set(settings.get("auto_convert_epub", False))
-                self.book_author_var.set(settings.get("book_author", "Unknown Author"))
-                self.chapter_pattern_var.set(settings.get("chapter_pattern", r"^Chương\s+\d+:\s+.*$"))
-                
-                # Load threads - nếu không có trong settings thì auto-detect
-                threads_setting = settings.get("threads")
-                if threads_setting:
-                    self.threads_var.set(threads_setting)
-                else:
-                    self.auto_detect_threads(silent=True)
-                    
-                self.chunk_size_var.set(settings.get("chunk_size", "100"))
-                
-                # Load custom prompt if exists
-                if hasattr(self, 'custom_prompt_textbox') and settings.get("custom_prompt"):
-                    self.custom_prompt_textbox.delete("0.0", "end")
-                    self.custom_prompt_textbox.insert("0.0", settings.get("custom_prompt"))
-                
-                # Trigger context change to show/hide custom prompt
-                self.on_context_changed(self.context_var.get())
-                
-                self.log("📂 Đã tải cài đặt")
-        except Exception as e:
-            self.log(f"⚠️ Lỗi tải cài đặt: {e}")
-    
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        """Thay đổi appearance mode"""
-        ctk.set_appearance_mode(new_appearance_mode)
-    
-    def on_closing(self):
-        """Xử lý khi đóng cửa sổ"""
-        try:
-            if self.is_translating:
-                if show_question("Đang dịch. Bạn có chắc muốn thoát?", parent=self):
-                    self.cleanup_and_exit()
+            if current_mode == "light":
+                # Light mode active
+                self.light_mode_btn.configure(
+                    fg_color=("orange", "darkorange"),
+                    hover_color=("darkorange", "orange")
+                )
+                self.dark_mode_btn.configure(
+                    fg_color=("gray", "darkgray"),
+                    hover_color=("darkgray", "gray")
+                )
             else:
-                self.cleanup_and_exit()
+                # Dark mode active
+                self.dark_mode_btn.configure(
+                    fg_color=("blue", "darkblue"),
+                    hover_color=("darkblue", "blue")
+                )
+                self.light_mode_btn.configure(
+                    fg_color=("gray", "darkgray"),
+                    hover_color=("darkgray", "gray")
+                )
         except Exception as e:
-            print(f"Lỗi khi đóng: {e}")
-            # Force exit
-            self.destroy()
-    
-    def cleanup_and_exit(self):
-        """Cleanup và thoát an toàn"""
-        try:
-            # Restore stdout
-            self.restore_stdout()
-            
-            # Cancel any running threads
-            if hasattr(self, 'translation_thread') and self.translation_thread:
-                # Note: Can't force stop threads, just set flag
-                self.is_translating = False
-            
-            # Clear any pending after calls
-            self.after_cancel("all")
-            
-        except Exception as e:
-            print(f"Lỗi cleanup: {e}")
-        finally:
-            # Force destroy
-            self.destroy()
+            self.log(f"⚠️ Lỗi cập nhật appearance buttons: {e}")
 
 def main():
     app = ModernTranslateNovelAI()
