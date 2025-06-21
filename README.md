@@ -1,10 +1,46 @@
-# 🤖 TranslateNovelAI
+# 🤖 TranslateNovelAI v2.0
 
-Ứng dụng dịch truyện tự động sử dụng Google AI (Gemini) để dịch truyện từ tiếng Anh sang tiếng Việt với giao diện GUI hiện đại và dễ sử dụng.
+Ứng dụng dịch truyện tự động sử dụng Google AI (Gemini) với **3 phiên bản giao diện** hiện đại, custom notifications và icon desktop đẹp mắt!
+
+## 🎉 Mới trong v2.0
+
+### 🎨 Custom UI & Notifications
+- ✅ **Custom popup dialogs** với giao diện hiện đại và animation
+- 🎊 **Toast notifications** với slide-in effects
+- 🎭 **Icon desktop** custom với gradient và robot AI design
+- 🌈 **Glass morphism effects** và gradient backgrounds
+- 📱 **Responsive design** với backdrop-filter blur
+- 💎 **Modern color schemes** với 3 themes khác nhau
+
+## 🎨 3 Phiên bản giao diện
+
+### 1. 🌐 **Web GUI (Gradio)** - Khuyến nghị ⭐
+- Giao diện web hiện đại với CSS tùy chỉnh và glass morphism
+- Chạy trên trình duyệt tại `http://localhost:7860`
+- Hiệu ứng gradient, backdrop-filter blur, responsive design
+- Toast notifications và progress tracking real-time
+- Có thể chia sẻ public link
+
+### 2. 💎 **Desktop GUI (CustomTkinter)** 
+- Giao diện desktop hiện đại với custom dialog popups
+- Dark/Light theme với modern styling và shadows
+- Native desktop experience với toast notifications
+- Progress bars và logging real-time
+
+### 3. 🖥️ **Classic GUI (Tkinter)**
+- Giao diện desktop truyền thống với tabs
+- Ổn định, tương thích tốt với mọi hệ điều hành
+- Full-featured với complete logging system
 
 ## 🚀 Quick Start
 
-### 📥 Download ngay (Không cần cài đặt)
+### 🎮 Launcher tổng hợp (Mới!)
+```bash
+python run_gui.py
+```
+**Chọn giao diện phù hợp:** Web, Desktop hiện đại, hay Classic
+
+### 📥 Download ngay (Classic GUI - Không cần cài đặt)
 **[⬇️ Tải TranslateNovelAI.exe](https://github.com/nguyenvinhdat642/TranlateNovelAI/releases/download/v1.0.0/TranslateNovelAI.exe)**
 
 ✅ Chạy trực tiếp trên Windows  
@@ -17,7 +53,16 @@
 
 ## ✨ Tính năng chính
 
+### 🎨 UI & UX
+- 🎭 **Custom icons**: Icon desktop gradient với robot AI design
+- 🎊 **Modern dialogs**: Custom popup thay thế messagebox cũ
+- 🌈 **Toast notifications**: Thông báo hiện đại với slide-in animation
+- 💎 **Glass morphism**: Hiệu ứng backdrop-filter blur cho web UI
+- 🎨 **3 phiên bản giao diện**: Web (Gradio), Desktop hiện đại (CustomTkinter), Classic (Tkinter)
+
+### ⚡ Performance & Features  
 - 🚀 **Multi-threading**: Dịch nhanh với 10 threads song song
+- 🎯 **8 bối cảnh dịch**: Hiện đại, cổ đại, fantasy, học đường, công sở, lãng mạn, hành động, tùy chỉnh
 - 📝 **Tự động reformat**: Loại bỏ dòng trống thừa sau khi dịch
 - 📚 **Convert sang EPUB**: Chuyển đổi từ TXT sang DOCX sang EPUB
 - 📊 **Progress tracking**: Theo dõi tiến độ dịch real-time với logs chi tiết
@@ -30,16 +75,28 @@
 
 ## 📋 Yêu cầu
 
+### 🔧 Cơ bản
 - Python 3.8 trở lên
 - Google AI API Key (miễn phí tại [Google AI Studio](https://aistudio.google.com/))
 - Internet connection
+
+### 📦 Dependencies (tự động cài với requirements.txt)
+- `google-generativeai` - Google AI SDK
+- `customtkinter>=5.2.0` - Modern desktop UI framework
+- `gradio>=4.0.0` - Web UI framework với CSS custom
+- `pillow>=9.0.0` - Xử lý hình ảnh cho icons
+- `python-docx` - Xử lý file DOCX
+- `pyinstaller` - Build exe files
+
+### 🎨 Tùy chọn
 - Pandoc (cho tính năng convert EPUB)
+- NSIS (cho tạo installer)
 
 ## 📦 Cài đặt
 
 ### 1. Clone repository
 ```bash
-git https://github.com/nguyenvinhdat642/TranlateNovelAI.git
+git clone https://github.com/nguyenvinhdat642/TranlateNovelAI.git
 cd TranslateNovelAI
 ```
 
@@ -49,8 +106,15 @@ pip install -r requirements.txt
 ```
 
 ### 3. Cài đặt Pandoc (nếu muốn dùng tính năng EPUB)
-- Tải tại: https://pandoc.org/installing.html
+- **Windows**: Tải tại https://pandoc.org/installing.html
+- **macOS**: `brew install pandoc` 
+- **Linux**: `sudo apt install pandoc`
 - Cập nhật đường dẫn Pandoc trong file `src/ConvertEpub.py`
+
+### 4. Chạy launcher
+```bash
+python run_gui.py
+```
 
 ## 🚀 Cách sử dụng
 
@@ -72,13 +136,26 @@ cd src
 python translate.py
 ```
 
-### Phương pháp 4: Build exe từ source
+### Phương pháp 4: Build exe từ source (Mới! - Tất cả UI variants)
 ```bash
-# Build exe từ source code
-python build.py
+# Build tất cả phiên bản GUI
+python build_all.py
 
-# Chạy file exe đã build
-dist/TranslateNovelAI.exe
+# Build từng phiên bản riêng lẻ
+python build.py          # Classic GUI
+python build_simple.py   # Alternative classic build
+
+# Chạy các file exe đã build
+dist/TranslateNovelAI_Web/TranslateNovelAI_Web.exe       # Web GUI
+dist/TranslateNovelAI_Modern/TranslateNovelAI_Modern.exe # Modern GUI  
+dist/TranslateNovelAI_Classic/TranslateNovelAI_Classic.exe # Classic GUI
+dist/TranslateNovelAI_Launcher/TranslateNovelAI_Launcher.exe # GUI Launcher
+```
+
+### 📦 Create Installer (Optional)
+```bash
+# Tạo NSIS installer (cần cài NSIS)
+makensis installer.nsi  # File sẽ được tạo bởi build_all.py
 ```
 
 ## 🔑 Cấu hình API Key
@@ -219,14 +296,30 @@ Tạo/chỉnh sửa file `settings.json`:
 ```
 TranslateNovelAI/
 ├── src/
-│   ├── gui_simple.py       # GUI chính với 4 tabs
-│   ├── translate.py        # Engine dịch với multi-threading
-│   ├── reformat.py         # Format text loại bỏ dòng trống thừa
-│   ├── ConvertEpub.py      # Chuyển đổi TXT → DOCX → EPUB
-│   └── settings.json       # Cấu hình người dùng
-├── requirements.txt        # Dependencies: google-generativeai, python-docx, pyinstaller
-├── build.py               # Build script tạo file exe
-└── README.md              # Tài liệu hướng dẫn
+│   ├── core/                    # Core modules
+│   │   ├── __init__.py
+│   │   ├── translate.py         # Engine dịch với multi-threading
+│   │   ├── reformat.py          # Format text loại bỏ dòng trống thừa
+│   │   └── ConvertEpub.py       # Chuyển đổi TXT → DOCX → EPUB
+│   ├── gui/                     # GUI modules
+│   │   ├── __init__.py
+│   │   ├── gui_web.py           # Web UI (Gradio) với glass morphism
+│   │   ├── gui_modern.py        # Modern Desktop UI (CustomTkinter)
+│   │   ├── gui_simple.py        # Classic Desktop UI (Tkinter) với 4 tabs
+│   │   └── custom_dialogs.py    # Custom dialog system v2.0
+│   ├── assets/                  # Resources & Icons
+│   │   ├── __init__.py
+│   │   ├── create_icon.py       # Icon generation script
+│   │   ├── app_icon.ico         # Application icon
+│   │   ├── success_icon.png     # Success notification icon
+│   │   └── icon_*.png           # Various sized icons
+│   └── __init__.py
+├── run_gui.py                   # Universal launcher with dependency check
+├── build_all.py                 # Universal build script cho tất cả GUI variants
+├── requirements.txt             # Dependencies: google-generativeai, customtkinter, gradio...
+├── README.md                    # Documentation v2.0
+├── CHANGELOG.md                 # Version history
+└── settings.json                # User configuration (auto-generated)
 ```
 
 ## 🆕 Tính năng mới
@@ -252,7 +345,64 @@ MIT License - Sử dụng tự do cho mục đích cá nhân và thương mại.
 
 ---
 
+## 🎭 Screenshots & Demo
+
+### 🌐 Web GUI với Glass Morphism
+*Chạy với: `python src/gui_web.py` hoặc từ launcher*
+
+### 💎 Desktop Modern với Custom Dialogs  
+*Chạy với: `python src/gui_modern.py` hoặc từ launcher*
+
+### 🖥️ Desktop Classic với Full Features
+*Chạy với: `python src/gui_simple.py` hoặc từ launcher*
+
+## 🔧 Troubleshooting v2.0
+
+### ❓ Lỗi Custom Dialogs
+```bash
+# Nếu custom dialogs không hiển thị
+pip install customtkinter>=5.2.0 pillow>=9.0.0
+
+# App sẽ tự động fallback về messagebox nếu có lỗi
+```
+
+### ❓ Lỗi Icon không hiển thị
+```bash
+# Tạo lại icons
+python assets/create_icon.py
+
+# Icons sẽ được tạo: app_icon.ico, success_icon.png
+```
+
+### ❓ Lỗi Build All
+```bash
+# Cài đặt PyInstaller
+pip install pyinstaller
+
+# Build từng phiên bản riêng nếu build_all thất bại
+python build.py         # Classic GUI
+python build_simple.py  # Alternative build
+```
+
+## 🏆 What's Next
+
+### 🔮 v2.1 Preview
+- 🌙 **Dark Mode Toggle**: Manual theme switching
+- 🎵 **Sound Effects**: Audio feedback for completion  
+- ⌨️ **Keyboard Shortcuts**: Hotkeys for common actions
+- 📊 **Advanced Progress**: Circular progress indicators
+
+### 🚀 v3.0 Vision  
+- 🔗 **Cloud Integration**: Sync settings across devices
+- 📱 **Mobile Interface**: Full mobile web support
+- 🎭 **Theme Marketplace**: Community-created themes
+- 🤖 **AI Improvements**: Multiple AI provider support
+
+---
+
 **Happy Translating! 🎉**
 
-*Phiên bản cập nhật với giao diện tabbed, smart file management và real-time logging*
+*v2.0 - Powered by Custom UI, Modern Notifications & Beautiful Icons*
+
+**⭐ Star this repo if you find it useful! ⭐**
 

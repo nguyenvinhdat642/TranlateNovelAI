@@ -12,9 +12,9 @@ from contextlib import redirect_stdout
 
 # Import translate functions
 try:
-    from translate import translate_file_optimized, generate_output_filename
-    from reformat import fix_text_format
-    from ConvertEpub import txt_to_docx, docx_to_epub
+    from ..core.translate import translate_file_optimized, generate_output_filename
+    from ..core.reformat import fix_text_format
+    from ..core.ConvertEpub import txt_to_docx, docx_to_epub
     TRANSLATE_AVAILABLE = True
     EPUB_AVAILABLE = True
 except ImportError as e:

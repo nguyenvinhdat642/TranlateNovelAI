@@ -9,7 +9,7 @@ from multiprocessing import cpu_count
 
 # Import reformat function
 try:
-    from reformat import fix_text_format
+    from .reformat import fix_text_format
     CAN_REFORMAT = True
     print("✅ Đã import thành công chức năng reformat")
 except ImportError:
