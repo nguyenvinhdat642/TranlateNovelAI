@@ -7,40 +7,88 @@ import time
 from datetime import datetime
 import json
 import re
+
+# Add the parent directory to the path to make absolute imports work
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 try:
     from .custom_dialogs import show_success, show_error, show_warning, show_question, show_toast_success, show_toast_error
 except ImportError:
-    # Fallback to standard messagebox if custom dialogs not available
-    from tkinter import messagebox
-    def show_success(msg, details=None, parent=None):
-        return messagebox.showinfo("Thành công", msg)
-    def show_error(msg, details=None, parent=None):
-        return messagebox.showerror("Lỗi", msg)
-    def show_warning(msg, details=None, parent=None):
-        return messagebox.showwarning("Cảnh báo", msg)
-    def show_question(msg, details=None, parent=None):
-        return messagebox.askyesno("Xác nhận", msg)
-    def show_toast_success(msg, duration=3000):
-        return messagebox.showinfo("Thành công", msg)
-    def show_toast_error(msg, duration=3000):
-        return messagebox.showerror("Lỗi", msg)
-from PIL import Image, ImageTk
+    try:
+        from custom_dialogs import show_success, show_error, show_warning, show_question, show_toast_success, show_toast_error
+    except ImportError:
+        # Fallback to standard messagebox if custom dialogs not available
+        from tkinter import messagebox
+        def show_success(msg, details=None, parent=None):
+            return messagebox.showinfo("Thành công", msg)
+        def show_error(msg, details=None, parent=None):
+            return messagebox.showerror("Lỗi", msg)
+        def show_warning(msg, details=None, parent=None):
+            return messagebox.showwarning("Cảnh báo", msg)
+        def show_question(msg, details=None, parent=None):
+            return messagebox.askyesno("Xác nhận", msg)
+        def show_toast_success(msg, duration=3000):
+            return messagebox.showinfo("Thành công", msg)
+        def show_toast_error(msg, duration=3000):
+            return messagebox.showerror("Lỗi", msg)
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    Image = None
+    ImageTk = None
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 # Import translate functions
+TRANSLATE_AVAILABLE = False
+EPUB_AVAILABLE = False
+
+# Try relative imports first (when run as module)
 try:
     from ..core.translate import translate_file_optimized, generate_output_filename
     from ..core.reformat import fix_text_format
     from ..core.ConvertEpub import txt_to_docx, docx_to_epub
     TRANSLATE_AVAILABLE = True
     EPUB_AVAILABLE = True
-except ImportError as e:
-    TRANSLATE_AVAILABLE = False
-    EPUB_AVAILABLE = False
-    print(f"⚠️ Lỗi import: {e}")
+except ImportError:
+    # Try absolute imports (when run directly)
+    try:
+        from core.translate import translate_file_optimized, generate_output_filename
+        from core.reformat import fix_text_format
+        from core.ConvertEpub import txt_to_docx, docx_to_epub
+        TRANSLATE_AVAILABLE = True
+        EPUB_AVAILABLE = True
+    except ImportError as e:
+        print(f"⚠️ Lỗi import: {e}")
+        print("⚠️ Một số chức năng có thể không hoạt động")
+        
+        # Define fallback functions
+        def translate_file_optimized(*args, **kwargs):
+            print("❌ Chức năng dịch không khả dụng")
+            return False
+            
+        def generate_output_filename(input_file):
+            """Generate output filename as fallback"""
+            base_name = os.path.splitext(input_file)[0]
+            return f"{base_name}_translated.txt"
+            
+        def fix_text_format(*args, **kwargs):
+            print("❌ Chức năng reformat không khả dụng")
+            return False
+            
+        def txt_to_docx(*args, **kwargs):
+            print("❌ Chức năng convert DOCX không khả dụng")
+            return False
+            
+        def docx_to_epub(*args, **kwargs):
+            print("❌ Chức năng convert EPUB không khả dụng")
+            return False
 
 class LogCapture:
     """Class để capture print statements và chuyển về GUI"""
