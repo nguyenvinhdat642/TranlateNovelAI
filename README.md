@@ -39,7 +39,7 @@
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/yourusername/TranslateNovelAI.git
+git https://github.com/nguyenvinhdat642/TranlateNovelAI.git
 cd TranslateNovelAI
 ```
 
