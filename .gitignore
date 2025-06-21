@@ -1,2 +1,8 @@
 *novel
 */src/settings.json
+*build
+*dist
+*__pycache__
+*settings.json
+*settings.json
+TranslateNovelAI.spec
