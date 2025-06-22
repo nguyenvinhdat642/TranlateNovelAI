@@ -35,6 +35,9 @@ CHUNK_SIZE_LINES = 100
 # Global stop event để dừng tiến trình dịch
 _stop_event = threading.Event()
 
+# Global quota exceeded flag
+_quota_exceeded = threading.Event()
+
 def set_stop_translation():
     """Dừng tiến trình dịch"""
     global _stop_event
@@ -43,14 +46,41 @@ def set_stop_translation():
 
 def clear_stop_translation():
     """Xóa flag dừng để có thể tiếp tục dịch"""
-    global _stop_event
+    global _stop_event, _quota_exceeded
     _stop_event.clear()
+    _quota_exceeded.clear()
     print("▶️ Đã xóa flag dừng, sẵn sàng tiếp tục...")
 
 def is_translation_stopped():
     """Kiểm tra xem có yêu cầu dừng không"""
     global _stop_event
     return _stop_event.is_set()
+
+def set_quota_exceeded():
+    """Đánh dấu API đã hết quota"""
+    global _quota_exceeded, _stop_event
+    _quota_exceeded.set()
+    _stop_event.set()  # Cũng dừng dịch
+    print("API đã hết quota - dừng tiến trình dịch")
+
+def is_quota_exceeded():
+    """Kiểm tra xem API có hết quota không"""
+    global _quota_exceeded
+    return _quota_exceeded.is_set()
+
+def check_quota_error(error_message):
+    """Kiểm tra xem có phải lỗi quota exceeded không"""
+    error_str = str(error_message).lower()
+    quota_keywords = [
+        "429",
+        "exceeded your current quota",
+        "quota exceeded", 
+        "rate limit",
+        "billing",
+        "please check your plan"
+    ]
+    
+    return any(keyword in error_str for keyword in quota_keywords)
 
 def get_optimal_threads():
     """
@@ -198,6 +228,13 @@ def translate_chunk(model, chunk_lines):
 
     except Exception as e:
         # Bắt các lỗi khác (ví dụ: lỗi mạng, lỗi API)
+        error_message = str(e)
+        
+        # Kiểm tra lỗi quota exceeded
+        if check_quota_error(error_message):
+            set_quota_exceeded()
+            return (f"[API HẾT QUOTA]", False, True)
+        
         return (f"[LỖI API KHI DỊCH CHUNK: {e}]", False, True)
 
 def get_progress(progress_file_path):
@@ -231,9 +268,12 @@ def process_chunk(api_key, model_name, system_instruction, chunk_data, log_callb
     """
     chunk_index, chunk_lines, chunk_start_line_index = chunk_data
     
-    # Kiểm tra flag dừng trước khi bắt đầu
-    if is_translation_stopped():
-        return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+    # Kiểm tra flag dừng và quota exceeded trước khi bắt đầu
+    if is_translation_stopped() or is_quota_exceeded():
+        if is_quota_exceeded():
+            return (chunk_index, f"[CHUNK {chunk_index} - API HẾT QUOTA]", len(chunk_lines))
+        else:
+            return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
     
     # Cấu hình API cho thread hiện tại
     genai.configure(api_key=api_key)
@@ -246,19 +286,29 @@ def process_chunk(api_key, model_name, system_instruction, chunk_data, log_callb
     safety_retries = 0
     is_safety_blocked = False  # Khởi tạo biến
     while safety_retries < MAX_RETRIES_ON_SAFETY_BLOCK:
-        # Kiểm tra flag dừng trong quá trình retry
-        if is_translation_stopped():
-            return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+        # Kiểm tra flag dừng và quota exceeded trong quá trình retry
+        if is_translation_stopped() or is_quota_exceeded():
+            if is_quota_exceeded():
+                return (chunk_index, f"[CHUNK {chunk_index} - API HẾT QUOTA]", len(chunk_lines))
+            else:
+                return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
             
         # Thử lại với bản dịch xấu  
         bad_translation_retries = 0
         while bad_translation_retries < MAX_RETRIES_ON_BAD_TRANSLATION:
-            # Kiểm tra flag dừng trong quá trình retry
-            if is_translation_stopped():
-                return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
+            # Kiểm tra flag dừng và quota exceeded trong quá trình retry
+            if is_translation_stopped() or is_quota_exceeded():
+                if is_quota_exceeded():
+                    return (chunk_index, f"[CHUNK {chunk_index} - API HẾT QUOTA]", len(chunk_lines))
+                else:
+                    return (chunk_index, f"[CHUNK {chunk_index} BỊ DỪNG BỞI NGƯỜI DÙNG]", len(chunk_lines))
                 
             try:
                 translated_text, is_safety_blocked, is_bad = translate_chunk(model, chunk_lines)
+                
+                # Kiểm tra quota exceeded sau khi dịch
+                if is_quota_exceeded():
+                    return (chunk_index, f"[CHUNK {chunk_index} - API HẾT QUOTA]", len(chunk_lines))
                 
                 if is_safety_blocked:
                     break # Thoát khỏi vòng lặp bad translation, sẽ retry safety
@@ -275,6 +325,11 @@ def process_chunk(api_key, model_name, system_instruction, chunk_data, log_callb
                     return (chunk_index, translated_text + " [KHÔNG CẢI THIỆN ĐƯỢC]", len(chunk_lines))
                     
             except Exception as e:
+                # Kiểm tra quota error
+                if check_quota_error(str(e)):
+                    set_quota_exceeded()
+                    return (chunk_index, f"[CHUNK {chunk_index} - API HẾT QUOTA]", len(chunk_lines))
+                
                 return (chunk_index, f"[LỖI XỬ LÝ CHUNK {chunk_index}: {e}]", len(chunk_lines))
         
         # Nếu bị chặn safety, thử lại
@@ -405,9 +460,13 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
                 
                 # Thu thập kết quả khi các threads hoàn thành
                 for future in concurrent.futures.as_completed(futures):
-                    # Kiểm tra flag dừng
+                    # Kiểm tra flag dừng và quota exceeded
                     if is_translation_stopped():
-                        print("🛑 Dừng xử lý kết quả do người dùng yêu cầu")
+                        if is_quota_exceeded():
+                            print("Dừng xử lý kết quả do API hết quota")
+                        else:
+                            print("🛑 Dừng xử lý kết quả do người dùng yêu cầu")
+                        
                         # Hủy các future chưa hoàn thành
                         for f in futures:
                             if not f.done():
@@ -468,10 +527,21 @@ def translate_file_optimized(input_file, output_file=None, api_key=None, model_n
 
         # Kiểm tra xem có bị dừng giữa chừng không
         if is_translation_stopped():
-            print(f"🛑 Tiến trình dịch đã bị dừng bởi người dùng.")
-            print(f"Đã xử lý {next_expected_chunk_to_write}/{total_chunks} chunks.")
-            print(f"💾 Tiến độ đã được lưu. Bạn có thể tiếp tục dịch sau.")
-            return False
+            if is_quota_exceeded():
+                print(f"API đã hết quota!")
+                print(f"Để tiếp tục dịch, vui lòng:")
+                print(f" 1. Tạo tài khoản Google Cloud mới")
+                print(f" 2. Nhận 300$ credit miễn phí") 
+                print(f" 3. Tạo API key mới từ ai.google.dev")
+                print(f" 4. Cập nhật API key và tiếp tục dịch")
+                print(f"Đã xử lý {next_expected_chunk_to_write}/{total_chunks} chunks.")
+                print(f"Tiến độ đã được lưu để tiếp tục sau.")
+                return False
+            else:
+                print(f"🛑 Tiến trình dịch đã bị dừng bởi người dùng.")
+                print(f"Đã xử lý {next_expected_chunk_to_write}/{total_chunks} chunks.")
+                print(f"💾 Tiến độ đã được lưu. Bạn có thể tiếp tục dịch sau.")
+                return False
 
         # Hoàn thành
         total_time = time.time() - start_time

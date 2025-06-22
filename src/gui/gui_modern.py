@@ -51,7 +51,7 @@ EPUB_AVAILABLE = False
 
 # Try relative imports first (when run as module)
 try:
-    from ..core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped
+    from ..core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped, is_quota_exceeded
     from ..core.reformat import fix_text_format
     from ..core.ConvertEpub import txt_to_docx, docx_to_epub
     TRANSLATE_AVAILABLE = True
@@ -59,7 +59,7 @@ try:
 except ImportError:
     # Try absolute imports (when run directly)
     try:
-        from core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped
+        from core.translate import translate_file_optimized, generate_output_filename, set_stop_translation, clear_stop_translation, is_translation_stopped, is_quota_exceeded
         from core.reformat import fix_text_format
         from core.ConvertEpub import txt_to_docx, docx_to_epub
         TRANSLATE_AVAILABLE = True
@@ -85,6 +85,9 @@ except ImportError:
             print("❌ Chức năng dừng dịch không khả dụng")
             
         def is_translation_stopped():
+            return False
+            
+        def is_quota_exceeded():
             return False
             
         def fix_text_format(*args, **kwargs):
@@ -985,17 +988,33 @@ class ModernTranslateNovelAI(ctk.CTk):
         if self.is_translating:
             if is_translation_stopped():
                 # Translation has been stopped
-                self.log("🛑 Dịch đã bị dừng")
-                self.is_translating = False
-                self.translate_btn.configure(
-                    state="normal", 
-                    text="▶️ Tiếp Tục Dịch",
-                    fg_color=("blue", "darkblue"),
-                    hover_color=("darkblue", "blue")
-                )
-                self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
-                self.restore_stdout()
-                return
+                if is_quota_exceeded():
+                    self.log("💳 API đã hết quota!")
+                    self.is_translating = False
+                    self.translate_btn.configure(
+                        state="normal", 
+                        text="🔄 Cần API Key Mới",
+                        fg_color=("orange", "darkorange"),
+                        hover_color=("darkorange", "orange")
+                    )
+                    self.progress_text.configure(text="API hết quota - cần API key mới")
+                    self.restore_stdout()
+                    
+                    # Show quota exceeded dialog
+                    self.show_quota_exceeded_dialog()
+                    return
+                else:
+                    self.log("🛑 Dịch đã bị dừng")
+                    self.is_translating = False
+                    self.translate_btn.configure(
+                        state="normal", 
+                        text="▶️ Tiếp Tục Dịch",
+                        fg_color=("blue", "darkblue"),
+                        hover_color=("darkblue", "blue")
+                    )
+                    self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
+                    self.restore_stdout()
+                    return
             else:
                 # Check again after 1 second
                 self.after(1000, self.check_translation_status)
@@ -1003,22 +1022,34 @@ class ModernTranslateNovelAI(ctk.CTk):
     def translation_finished(self):
         """Kết thúc quá trình dịch"""
         self.is_translating = False
-        self.translate_btn.configure(
-            state="normal", 
-            text="🚀 Bắt Đầu Dịch",
-            fg_color=("blue", "darkblue"),
-            hover_color=("darkblue", "blue")
-        )
         
         # Restore stdout
         self.restore_stdout()
         
-        if not self.progress_text.cget("text").startswith("Hoàn thành"):
-            # Check if stopped or failed
-            if is_translation_stopped():
-                self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
-            else:
-                self.progress_text.configure(text="Sẵn sàng")
+        if is_quota_exceeded():
+            # API hết quota
+            self.translate_btn.configure(
+                state="normal", 
+                text="🔄 Cần API Key Mới",
+                fg_color=("orange", "darkorange"),
+                hover_color=("darkorange", "orange")
+            )
+            self.progress_text.configure(text="API hết quota - cần API key mới")
+        else:
+            # Dịch hoàn thành hoặc bị dừng bình thường
+            self.translate_btn.configure(
+                state="normal", 
+                text="🚀 Bắt Đầu Dịch",
+                fg_color=("blue", "darkblue"),
+                hover_color=("darkblue", "blue")
+            )
+            
+            if not self.progress_text.cget("text").startswith("Hoàn thành"):
+                # Check if stopped or failed
+                if is_translation_stopped():
+                    self.progress_text.configure(text="Đã dừng - có thể tiếp tục")
+                else:
+                    self.progress_text.configure(text="Sẵn sàng")
     
     def convert_to_epub(self, txt_file):
         """Convert file to EPUB"""
@@ -1264,8 +1295,14 @@ class ModernTranslateNovelAI(ctk.CTk):
                 show_success(f"Dịch hoàn thành!\nFile: {os.path.basename(output_file)}", 
                            details=f"Đường dẫn: {output_file}", parent=self)
             else:
-                self.log("❌ Dịch thất bại")
-                show_error("Quá trình dịch thất bại", parent=self)
+                # Translation failed or stopped
+                if is_quota_exceeded():
+                    self.log("💳 Dịch dừng do API hết quota")
+                    show_error("API đã hết quota!\n\nVui lòng tạo tài khoản Google Cloud mới để nhận 300$ credit miễn phí.", 
+                             details="Tiến độ đã được lưu, bạn có thể tiếp tục khi có API key mới.", parent=self)
+                else:
+                    self.log("❌ Dịch thất bại")
+                    show_error("Quá trình dịch thất bại", parent=self)
                 
         except Exception as e:
             self.log(f"❌ Lỗi: {e}")
@@ -1349,6 +1386,122 @@ class ModernTranslateNovelAI(ctk.CTk):
                 )
         except Exception as e:
             self.log(f"⚠️ Lỗi cập nhật appearance buttons: {e}")
+
+    def show_quota_exceeded_dialog(self):
+        """Hiển thị dialog hướng dẫn khi API hết quota"""
+        quota_message = """🚨 API Google AI đã hết quota miễn phí!
+
+💡 Giải pháp: Tạo tài khoản Google Cloud mới để nhận 300$ credit miễn phí
+
+📋 Hướng dẫn chi tiết:
+
+1️⃣ Truy cập: https://cloud.google.com/
+2️⃣ Đăng ký tài khoản mới (email khác)
+3️⃣ Nhận 300$ credit miễn phí
+4️⃣ Tạo API key mới tại: https://ai.google.dev/
+5️⃣ Cập nhật API key trong ứng dụng
+6️⃣ Tiếp tục dịch từ nơi đã dừng
+
+💾 Tiến độ dịch đã được lưu, bạn có thể tiếp tục ngay khi có API key mới!
+
+🔗 Link hữu ích:
+- Google Cloud Console: https://console.cloud.google.com/
+- Google AI Studio: https://aistudio.google.com/
+- Hướng dẫn tạo API key: https://ai.google.dev/gemini-api/docs/api-key"""
+
+        try:
+            # Create custom dialog window
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("💳 API Hết Quota")
+            dialog.geometry("650x700")
+            dialog.transient(self)
+            dialog.grab_set()
+            
+            # Center the dialog
+            dialog.update_idletasks()
+            x = (dialog.winfo_screenwidth() // 2) - (650 // 2)
+            y = (dialog.winfo_screenheight() // 2) - (700 // 2)
+            dialog.geometry(f"+{x}+{y}")
+            
+            # Main frame
+            main_frame = ctk.CTkFrame(dialog)
+            main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
+            # Title
+            title_label = ctk.CTkLabel(
+                main_frame,
+                text="💳 API Google AI Đã Hết Quota",
+                font=ctk.CTkFont(size=20, weight="bold"),
+                text_color=("red", "orange")
+            )
+            title_label.pack(pady=(20, 10))
+            
+            # Scrollable text area for message
+            text_frame = ctk.CTkScrollableFrame(main_frame)
+            text_frame.pack(fill="both", expand=True, padx=20, pady=10)
+            
+            message_label = ctk.CTkLabel(
+                text_frame,
+                text=quota_message,
+                justify="left",
+                wraplength=550,
+                font=ctk.CTkFont(size=12)
+            )
+            message_label.pack(fill="x", padx=10, pady=10)
+            
+            # Button frame
+            button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+            button_frame.pack(fill="x", padx=20, pady=(10, 20))
+            
+            # Copy links button
+            def copy_google_cloud_link():
+                import tkinter as tk
+                try:
+                    dialog.clipboard_clear()
+                    dialog.clipboard_append("https://cloud.google.com/")
+                    show_toast_success("Đã copy link Google Cloud!")
+                except:
+                    pass
+            
+            def copy_ai_studio_link():
+                import tkinter as tk
+                try:
+                    dialog.clipboard_clear()
+                    dialog.clipboard_append("https://aistudio.google.com/")
+                    show_toast_success("Đã copy link AI Studio!")
+                except:
+                    pass
+            
+            copy_gc_btn = ctk.CTkButton(
+                button_frame,
+                text="📋 Copy Link Google Cloud",
+                command=copy_google_cloud_link,
+                width=180
+            )
+            copy_gc_btn.pack(side="left", padx=(0, 10))
+            
+            copy_ai_btn = ctk.CTkButton(
+                button_frame,
+                text="📋 Copy Link AI Studio", 
+                command=copy_ai_studio_link,
+                width=180
+            )
+            copy_ai_btn.pack(side="left", padx=10)
+            
+            close_btn = ctk.CTkButton(
+                button_frame,
+                text="✅ Đã Hiểu",
+                command=dialog.destroy,
+                width=100,
+                fg_color=("green", "darkgreen"),
+                hover_color=("darkgreen", "green")
+            )
+            close_btn.pack(side="right")
+            
+        except Exception as e:
+            # Fallback to simple error dialog
+            show_error("API đã hết quota!\n\nVui lòng tạo tài khoản Google Cloud mới để nhận 300$ credit miễn phí.\n\nTruy cập: https://cloud.google.com/", parent=self)
+            self.log(f"⚠️ Lỗi hiển thị quota dialog: {e}")
 
 def main():
     app = ModernTranslateNovelAI()
